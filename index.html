@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Workout Tracker</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #252525;
+    --primary: #4fc3f7;
+    --primary-dim: #2196c4;
+    --accent: #ff7043;
+    --green: #66bb6a;
+    --red: #ef5350;
+    --text: #e0e0e0;
+    --text2: #9e9e9e;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Navigation ── */
+  .nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--surface2);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav button {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text2);
+    padding: 10px 0 8px;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    transition: color .2s;
+  }
+  .nav button.active { color: var(--primary); }
+  .nav button svg { width: 24px; height: 24px; }
+
+  /* ── Pages ── */
+  .page { display: none; padding: 16px 16px 80px; }
+  .page.active { display: block; }
+
+  h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text2);
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--primary); color: #000; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .btn-block { width: 100%; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  /* ── Inputs ── */
+  input, select {
+    background: var(--surface2);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 15px;
+    padding: 10px 12px;
+    width: 100%;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input:focus, select:focus { border-color: var(--primary); }
+  input::placeholder { color: var(--text2); }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  .input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .input-group > div { flex: 1; }
+
+  /* ── Timer ── */
+  .timer-display {
+    font-size: 72px;
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    padding: 32px 0;
+    letter-spacing: 2px;
+  }
+  .timer-controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .rest-presets {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .rest-presets button {
+    background: var(--surface2);
+    border: none;
+    border-radius: 20px;
+    color: var(--text);
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .rest-presets button.active-rest {
+    background: var(--accent);
+    color: #fff;
+  }
+  .rest-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin-top: 16px;
+    overflow: hidden;
+  }
+  .rest-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width .3s;
+    width: 0%;
+  }
+
+  /* ── Exercise list in workout ── */
+  .exercise-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .exercise-header h2 { margin: 0; color: var(--primary); font-size: 16px; }
+  .set-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .set-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text2);
+    flex-shrink: 0;
+  }
+  .set-num.done { background: var(--green); color: #000; }
+  .set-row input {
+    padding: 8px;
+    font-size: 14px;
+    text-align: center;
+  }
+  .set-row .btn { padding: 8px 12px; font-size: 13px; }
+
+  /* ── History ── */
+  .history-item {
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .history-item:active { background: var(--surface2); }
+  .history-date {
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .history-summary {
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  .history-detail {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--surface2);
+    font-size: 14px;
+  }
+  .history-detail.open { display: block; }
+  .history-detail table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .history-detail th {
+    text-align: left;
+    color: var(--text2);
+    font-weight: 500;
+    font-size: 12px;
+    padding: 4px 0;
+  }
+  .history-detail td {
+    padding: 3px 0;
+    font-size: 13px;
+  }
+
+  .tag {
+    display: inline-block;
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 12px;
+    color: var(--text2);
+    margin-right: 4px;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--text2);
+    padding: 48px 16px;
+    font-size: 15px;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    padding: 24px 16px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+  .modal h2 { margin-bottom: 16px; color: var(--text); }
+
+  /* ── Delete button ── */
+  .delete-small {
+    background: none;
+    border: none;
+    color: var(--red);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    opacity: .7;
+  }
+  .delete-small:hover { opacity: 1; }
+
+  /* ── Workout active banner ── */
+  .active-workout-banner {
+    display: none;
+    background: var(--primary-dim);
+    color: #fff;
+    text-align: center;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+  }
+  .active-workout-banner.show { display: block; }
+
+  .volume-stat {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text2);
+    text-transform: uppercase;
+  }
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  @media (min-width: 500px) {
+    .page { max-width: 500px; margin: 0 auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Active Workout Banner ── -->
+<div class="active-workout-banner" id="workoutBanner" onclick="showPage('workout')">
+  Тренировка в процессе — нажми, чтобы вернуться
+</div>
+
+<!-- ════════════════ PAGE: HOME ════════════════ -->
+<div class="page active" id="page-home">
+  <h1>Workout Tracker</h1>
+
+  <div id="homeStats" class="card" style="display:none">
+    <div class="stats-row">
+      <div>
+        <div class="stat-label">Тренировок (неделя)</div>
+        <div class="volume-stat" id="weekCount">0</div>
+      </div>
+      <div>
+        <div class="stat-label">Общий объём (кг)</div>
+        <div class="volume-stat" id="weekVolume">0</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-block" onclick="startNewWorkout()" id="btnStart">
+    Начать тренировку
+  </button>
+</div>
+
+<!-- ════════════════ PAGE: WORKOUT ════════════════ -->
+<div class="page" id="page-workout">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h1 style="margin:0" id="workoutTitle">Тренировка</h1>
+    <span id="workoutElapsed" style="font-variant-numeric:tabular-nums; color:var(--text2)">00:00</span>
+  </div>
+
+  <div id="exerciseList"></div>
+
+  <button class="btn btn-ghost btn-block" onclick="openAddExercise()" style="margin-bottom:12px">+ Добавить упражнение</button>
+
+  <div style="display:flex; gap:8px">
+    <button class="btn btn-green" style="flex:1" onclick="finishWorkout()">Завершить</button>
+    <button class="btn btn-red" style="flex:1" onclick="cancelWorkout()">Отменить</button>
+  </div>
+</div>
+
+<!-- ════════════════ PAGE: TIMER ════════════════ -->
+<div class="page" id="page-timer">
+  <h1>Таймер</h1>
+
+  <div class="card">
+    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-controls">
+      <button class="btn btn-primary" id="btnTimerStart" onclick="timerToggle()">Старт</button>
+      <button class="btn btn-ghost" onclick="timerReset()">Сброс</button>
+    </div>
+  </div>
+
+  <h2 style="margin-top:24px">Таймер отдыха</h2>
+  <div class="card">
+    <div class="timer-display" id="restDisplay" style="font-size:48px; color:var(--accent)">01:30</div>
+    <div class="rest-bar"><div class="rest-bar-fill" id="restBarFill"></div></div>
+    <div class="rest-presets" id="restPresets">
+      <button onclick="setRest(30)">0:30</button>
+      <button onclick="setRest(60)">1:00</button>
+      <button class="active-rest" onclick="setRest(90)">1:30</button>
+      <button onclick="setRest(120)">2:00</button>
+      <button onclick="setRest(180)">3:00</button>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:16px; justify-content:center">
+      <button class="btn btn-accent" id="btnRestStart" onclick="restToggle()">Старт</button>
+      <button class="btn btn-ghost" onclick="restReset()">Сброс</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ PAGE: HISTORY ════════════════ -->
+<div class="page" id="page-history">
+  <h1>История</h1>
+  <div id="historyList"></div>
+</div>
+
+<!-- ════════════════ MODAL: Add Exercise ════════════════ -->
+<div class="modal-overlay" id="modalExercise">
+  <div class="modal">
+    <h2>Добавить упражнение</h2>
+    <div style="margin-bottom:12px">
+      <label>Название</label>
+      <input type="text" id="exerciseNameInput" placeholder="Жим лёжа" list="exerciseSuggestions">
+      <datalist id="exerciseSuggestions"></datalist>
+    </div>
+    <div style="display:flex; gap:8px">
+      <button class="btn btn-primary" style="flex:1" onclick="addExercise()">Добавить</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modalExercise')">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <button class="active" onclick="showPage('home')" data-page="home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-6 0a1 1 0 01-1-1v-4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>
+    Главная
+  </button>
+  <button onclick="showPage('workout')" data-page="workout">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="1"/><line x1="12" y1="7" x2="12" y2="17"/><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/></svg>
+    Тренировка
+  </button>
+  <button onclick="showPage('timer')" data-page="timer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="9"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="13" x2="15" y2="13"/><line x1="12" y1="1" x2="12" y2="4"/></svg>
+    Таймер
+  </button>
+  <button onclick="showPage('history')" data-page="history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/><path d="M1 12A11 11 0 0112 1"/></svg>
+    История
+  </button>
+</nav>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let currentWorkout = null; // { startTime, exercises: [{ name, sets: [{ weight, reps, done }] }] }
+let workoutInterval = null;
+
+// Timer state
+let timerRunning = false, timerSeconds = 0, timerInterval = null;
+// Rest timer state
+let restRunning = false, restSeconds = 90, restTotal = 90, restInterval = null;
+
+const STORAGE_KEY = 'workout_history';
+const EXERCISES_KEY = 'known_exercises';
+
+// ══════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.page === name));
+
+  if (name === 'history') renderHistory();
+  if (name === 'home') renderHomeStats();
+
+  // show banner if workout active and not on workout page
+  const banner = document.getElementById('workoutBanner');
+  banner.classList.toggle('show', currentWorkout !== null && name !== 'workout');
+}
+
+// ══════════════════════════════════════════
+//  WORKOUT
+// ══════════════════════════════════════════
+function startNewWorkout() {
+  if (currentWorkout) {
+    showPage('workout');
+    return;
+  }
+  currentWorkout = { startTime: Date.now(), exercises: [] };
+  startWorkoutTimer();
+  showPage('workout');
+  renderExercises();
+}
+
+function startWorkoutTimer() {
+  clearInterval(workoutInterval);
+  workoutInterval = setInterval(() => {
+    if (!currentWorkout) return;
+    const secs = Math.floor((Date.now() - currentWorkout.startTime) / 1000);
+    document.getElementById('workoutElapsed').textContent = fmtTime(secs);
+  }, 1000);
+}
+
+function openAddExercise() {
+  updateExerciseSuggestions();
+  document.getElementById('exerciseNameInput').value = '';
+  openModal('modalExercise');
+  setTimeout(() => document.getElementById('exerciseNameInput').focus(), 100);
+}
+
+function addExercise() {
+  const name = document.getElementById('exerciseNameInput').value.trim();
+  if (!name) return;
+  currentWorkout.exercises.push({ name, sets: [{ weight: '', reps: '', done: false }] });
+  saveKnownExercise(name);
+  closeModal('modalExercise');
+  renderExercises();
+}
+
+function addSet(exIdx) {
+  const lastSet = currentWorkout.exercises[exIdx].sets.at(-1);
+  currentWorkout.exercises[exIdx].sets.push({
+    weight: lastSet ? lastSet.weight : '',
+    reps: lastSet ? lastSet.reps : '',
+    done: false
+  });
+  renderExercises();
+}
+
+function toggleSet(exIdx, setIdx) {
+  const s = currentWorkout.exercises[exIdx].sets[setIdx];
+  s.done = !s.done;
+  renderExercises();
+}
+
+function removeExercise(exIdx) {
+  currentWorkout.exercises.splice(exIdx, 1);
+  renderExercises();
+}
+
+function updateSetField(exIdx, setIdx, field, value) {
+  currentWorkout.exercises[exIdx].sets[setIdx][field] = value;
+}
+
+function renderExercises() {
+  const container = document.getElementById('exerciseList');
+  if (!currentWorkout || currentWorkout.exercises.length === 0) {
+    container.innerHTML = '<div class="empty-state">Добавь упражнение, чтобы начать</div>';
+    return;
+  }
+  container.innerHTML = currentWorkout.exercises.map((ex, ei) => `
+    <div class="card">
+      <div class="exercise-header">
+        <h2>${esc(ex.name)}</h2>
+        <button class="delete-small" onclick="removeExercise(${ei})">&times;</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:6px; padding-left:36px;">
+        <div style="flex:1; font-size:11px; color:var(--text2); text-align:center">КГ</div>
+        <div style="flex:1; font-size:11px; color:var(--text2); text-align:center">ПОВТ</div>
+        <div style="width:44px"></div>
+      </div>
+      ${ex.sets.map((s, si) => `
+        <div class="set-row">
+          <div class="set-num ${s.done ? 'done' : ''}">${si + 1}</div>
+          <input type="number" inputmode="decimal" placeholder="0" value="${s.weight}"
+            onchange="updateSetField(${ei},${si},'weight',this.value)" style="flex:1">
+          <input type="number" inputmode="numeric" placeholder="0" value="${s.reps}"
+            onchange="updateSetField(${ei},${si},'reps',this.value)" style="flex:1">
+          <button class="btn ${s.done ? 'btn-green' : 'btn-ghost'}" onclick="toggleSet(${ei},${si})"
+            style="min-width:44px">${s.done ? '&#10003;' : '&#9675;'}</button>
+        </div>
+      `).join('')}
+      <button class="btn btn-ghost btn-block" onclick="addSet(${ei})" style="margin-top:8px; font-size:13px">+ Подход</button>
+    </div>
+  `).join('');
+}
+
+function finishWorkout() {
+  if (!currentWorkout) return;
+  if (currentWorkout.exercises.length === 0) {
+    cancelWorkout();
+    return;
+  }
+  const workout = {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    duration: Math.floor((Date.now() - currentWorkout.startTime) / 1000),
+    exercises: currentWorkout.exercises.map(ex => ({
+      name: ex.name,
+      sets: ex.sets.filter(s => s.done).map(s => ({
+        weight: parseFloat(s.weight) || 0,
+        reps: parseInt(s.reps) || 0
+      }))
+    })).filter(ex => ex.sets.length > 0)
+  };
+
+  if (workout.exercises.length === 0) {
+    if (!confirm('Нет завершённых подходов. Отменить тренировку?')) return;
+    cancelWorkout();
+    return;
+  }
+
+  const history = getHistory();
+  history.unshift(workout);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+
+  currentWorkout = null;
+  clearInterval(workoutInterval);
+  document.getElementById('workoutBanner').classList.remove('show');
+  showPage('history');
+}
+
+function cancelWorkout() {
+  if (currentWorkout && currentWorkout.exercises.length > 0) {
+    if (!confirm('Отменить тренировку? Данные не сохранятся.')) return;
+  }
+  currentWorkout = null;
+  clearInterval(workoutInterval);
+  document.getElementById('workoutBanner').classList.remove('show');
+  document.getElementById('workoutElapsed').textContent = '00:00';
+  showPage('home');
+}
+
+// ══════════════════════════════════════════
+//  STOPWATCH TIMER
+// ══════════════════════════════════════════
+function timerToggle() {
+  if (timerRunning) {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    document.getElementById('btnTimerStart').textContent = 'Старт';
+  } else {
+    timerRunning = true;
+    document.getElementById('btnTimerStart').textContent = 'Стоп';
+    timerInterval = setInterval(() => {
+      timerSeconds++;
+      document.getElementById('timerDisplay').textContent = fmtTime(timerSeconds);
+    }, 1000);
+  }
+}
+
+function timerReset() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = 0;
+  document.getElementById('timerDisplay').textContent = '00:00';
+  document.getElementById('btnTimerStart').textContent = 'Старт';
+}
+
+// ══════════════════════════════════════════
+//  REST TIMER
+// ══════════════════════════════════════════
+function setRest(sec) {
+  restTotal = sec;
+  restSeconds = sec;
+  restRunning = false;
+  clearInterval(restInterval);
+  document.getElementById('restDisplay').textContent = fmtTime(sec);
+  document.getElementById('restBarFill').style.width = '0%';
+  document.getElementById('btnRestStart').textContent = 'Старт';
+  document.querySelectorAll('#restPresets button').forEach(b => {
+    b.classList.toggle('active-rest', parseInt(b.textContent.split(':')[0]) * 60 + parseInt(b.textContent.split(':')[1]) === sec);
+  });
+}
+
+function restToggle() {
+  if (restRunning) {
+    clearInterval(restInterval);
+    restRunning = false;
+    document.getElementById('btnRestStart').textContent = 'Старт';
+  } else {
+    restRunning = true;
+    document.getElementById('btnRestStart').textContent = 'Пауза';
+    restInterval = setInterval(() => {
+      restSeconds--;
+      if (restSeconds <= 0) {
+        restSeconds = 0;
+        clearInterval(restInterval);
+        restRunning = false;
+        document.getElementById('btnRestStart').textContent = 'Старт';
+        playBeep();
+        if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      }
+      document.getElementById('restDisplay').textContent = fmtTime(restSeconds);
+      const pct = ((restTotal - restSeconds) / restTotal) * 100;
+      document.getElementById('restBarFill').style.width = pct + '%';
+    }, 1000);
+  }
+}
+
+function restReset() {
+  clearInterval(restInterval);
+  restRunning = false;
+  restSeconds = restTotal;
+  document.getElementById('restDisplay').textContent = fmtTime(restTotal);
+  document.getElementById('restBarFill').style.width = '0%';
+  document.getElementById('btnRestStart').textContent = 'Старт';
+}
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.value = 0.3;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+}
+
+function renderHistory() {
+  const history = getHistory();
+  const container = document.getElementById('historyList');
+
+  if (history.length === 0) {
+    container.innerHTML = '<div class="empty-state">Пока нет тренировок.<br>Начни первую!</div>';
+    return;
+  }
+
+  container.innerHTML = history.map((w, i) => {
+    const d = new Date(w.date);
+    const dateStr = d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' });
+    const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const vol = w.exercises.reduce((sum, ex) => sum + ex.sets.reduce((s, set) => s + set.weight * set.reps, 0), 0);
+    const exNames = w.exercises.map(e => e.name).join(', ');
+
+    return `
+      <div class="card history-item" onclick="toggleHistoryDetail(${i})">
+        <div style="display:flex; justify-content:space-between; align-items:start">
+          <div>
+            <div class="history-date">${dateStr} ${timeStr} &middot; ${fmtTime(w.duration)}</div>
+            <div class="history-summary">${esc(exNames)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700; color:var(--primary)">${formatNum(vol)} кг</div>
+            <button class="delete-small" onclick="event.stopPropagation(); deleteWorkout(${i})" style="font-size:14px">удалить</button>
+          </div>
+        </div>
+        <div class="history-detail" id="detail-${i}">
+          ${w.exercises.map(ex => `
+            <div style="margin-bottom:8px">
+              <strong>${esc(ex.name)}</strong>
+              <table>
+                <tr><th>#</th><th>Вес</th><th>Повт</th><th>Объём</th></tr>
+                ${ex.sets.map((s, si) => `
+                  <tr>
+                    <td>${si + 1}</td>
+                    <td>${s.weight} кг</td>
+                    <td>${s.reps}</td>
+                    <td>${s.weight * s.reps} кг</td>
+                  </tr>
+                `).join('')}
+              </table>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleHistoryDetail(idx) {
+  document.getElementById('detail-' + idx).classList.toggle('open');
+}
+
+function deleteWorkout(idx) {
+  if (!confirm('Удалить эту тренировку?')) return;
+  const history = getHistory();
+  history.splice(idx, 1);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+// ══════════════════════════════════════════
+//  HOME STATS
+// ══════════════════════════════════════════
+function renderHomeStats() {
+  const history = getHistory();
+  if (history.length === 0) {
+    document.getElementById('homeStats').style.display = 'none';
+    return;
+  }
+  document.getElementById('homeStats').style.display = 'block';
+
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const weekWorkouts = history.filter(w => new Date(w.date).getTime() > weekAgo);
+  const weekVol = weekWorkouts.reduce((sum, w) =>
+    sum + w.exercises.reduce((s, ex) =>
+      s + ex.sets.reduce((ss, set) => ss + set.weight * set.reps, 0), 0), 0);
+
+  document.getElementById('weekCount').textContent = weekWorkouts.length;
+  document.getElementById('weekVolume').textContent = formatNum(weekVol);
+
+  // Update start button
+  document.getElementById('btnStart').textContent = currentWorkout ? 'Продолжить тренировку' : 'Начать тренировку';
+}
+
+// ══════════════════════════════════════════
+//  EXERCISE SUGGESTIONS
+// ══════════════════════════════════════════
+function getKnownExercises() {
+  try { return JSON.parse(localStorage.getItem(EXERCISES_KEY)) || []; } catch { return []; }
+}
+
+function saveKnownExercise(name) {
+  const known = getKnownExercises();
+  const lower = name.toLowerCase();
+  if (!known.find(e => e.toLowerCase() === lower)) {
+    known.push(name);
+    localStorage.setItem(EXERCISES_KEY, JSON.stringify(known));
+  }
+}
+
+function updateExerciseSuggestions() {
+  const dl = document.getElementById('exerciseSuggestions');
+  dl.innerHTML = getKnownExercises().map(e => `<option value="${esc(e)}">`).join('');
+}
+
+// ══════════════════════════════════════════
+//  MODAL
+// ══════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function formatNum(n) {
+  return n.toLocaleString('ru-RU');
+}
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// Init
+renderHomeStats();
+</script>
+</body>
+</html>
