@@ -267,6 +267,17 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   font-family: inherit; margin-bottom: 10px;
 }
 
+/* Settings */
+.settings-info { font-size: 13px; color: var(--text2); margin-bottom: 12px; line-height: 1.5; }
+.settings-info b { color: var(--text); }
+.settings-connected { color: var(--green); font-weight: 600; margin-bottom: 12px; }
+.settings-field { font-size: 13px; color: var(--text2); margin-bottom: 4px; }
+.settings-syncing { color: var(--orange); font-size: 13px; margin-top: 8px; }
+.gear-btn {
+  background: none; border: none; color: var(--text2);
+  font-size: 22px; cursor: pointer; padding: 4px 8px;
+}
+
 @media (min-width: 500px) {
   .page, .addset-body { max-width: 500px; margin-left: auto; margin-right: auto; }
 }
@@ -276,7 +287,10 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 
 <!-- ═══════ PAGE: HOME ═══════ -->
 <div class="page active" id="page-home">
-  <h1>Workout Tracker</h1>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h1 style="margin:0">Workout Tracker</h1>
+    <button class="gear-btn" onclick="openSettings()">&#9881;</button>
+  </div>
   <button class="btn btn-primary btn-block" onclick="startNewWorkout()" id="btnStart" style="margin-bottom:20px">
     Начать тренировку
   </button>
@@ -358,6 +372,14 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
         <button class="btn-confirm" id="btnConfirmSet" onclick="confirmSetFromStaging()" disabled>Готово</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL: Settings ═══════ -->
+<div class="modal-bg" id="modalSettings">
+  <div class="modal">
+    <h2>Синхронизация</h2>
+    <div id="settingsContent"></div>
   </div>
 </div>
 
@@ -446,7 +468,10 @@ let repsStaging = ''; // e.g. '', '7', '7+', '7+2'
 function getHistory() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
 }
-function saveHistory(h) { localStorage.setItem(STORAGE_KEY, JSON.stringify(h)); }
+function saveHistory(h) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(h));
+  syncToCloud(); // fire-and-forget
+}
 function saveCurrent() {
   if (currentWorkout) localStorage.setItem(CURRENT_KEY, JSON.stringify(currentWorkout));
   else localStorage.removeItem(CURRENT_KEY);
@@ -869,11 +894,200 @@ function esc(str) {
 }
 
 // ═══════════════════════════════════
+//  GIST SYNC
+// ═══════════════════════════════════
+const TOKEN_KEY = 'wt_gh_token';
+const GIST_KEY = 'wt_gist_id';
+const SYNC_KEY = 'wt_last_sync';
+
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+function getGistId() { return localStorage.getItem(GIST_KEY); }
+function isConnected() { return !!(getToken() && getGistId()); }
+
+async function gistRequest(method, path, body) {
+  const opts = {
+    method,
+    headers: {
+      'Authorization': `token ${getToken()}`,
+      'Accept': 'application/vnd.github.v3+json'
+    }
+  };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const resp = await fetch(`https://api.github.com${path}`, opts);
+  if (!resp.ok) {
+    const err = await resp.text().catch(() => '');
+    throw new Error(`GitHub API ${resp.status}: ${err}`);
+  }
+  return resp.json();
+}
+
+async function createGist(data) {
+  const gist = await gistRequest('POST', '/gists', {
+    description: 'Workout Tracker Data',
+    public: false,
+    files: { 'workouts.json': { content: JSON.stringify(data, null, 2) } }
+  });
+  return gist.id;
+}
+
+async function loadGistData() {
+  const gist = await gistRequest('GET', `/gists/${getGistId()}`);
+  const content = gist.files['workouts.json']?.content;
+  return content ? JSON.parse(content) : null;
+}
+
+async function updateGistData(data) {
+  await gistRequest('PATCH', `/gists/${getGistId()}`, {
+    files: { 'workouts.json': { content: JSON.stringify(data, null, 2) } }
+  });
+}
+
+// Auto-push: save local history to Gist (non-blocking)
+async function syncToCloud() {
+  if (!isConnected()) return;
+  try {
+    await updateGistData(getHistory());
+    localStorage.setItem(SYNC_KEY, new Date().toISOString());
+  } catch(e) { console.error('Sync push failed:', e); }
+}
+
+// Auto-pull: load from Gist on app start
+async function syncFromCloud() {
+  if (!isConnected()) return;
+  try {
+    const remote = await loadGistData();
+    if (remote && remote.length > 0) {
+      // Merge: union by workout id, remote wins for same id
+      const local = getHistory();
+      const merged = new Map();
+      local.forEach(w => merged.set(w.id, w));
+      remote.forEach(w => merged.set(w.id, w));
+      const result = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
+      localStorage.setItem(SYNC_KEY, new Date().toISOString());
+      // Re-render
+      const active = document.querySelector('.page.active');
+      if (active) showPage(active.id.replace('page-', ''));
+    }
+  } catch(e) { console.error('Sync pull failed:', e); }
+}
+
+// ── Settings UI ──
+function openSettings() {
+  renderSettings();
+  document.getElementById('modalSettings').classList.add('open');
+}
+
+function renderSettings() {
+  const el = document.getElementById('settingsContent');
+  if (!isConnected()) {
+    el.innerHTML = `
+      <div class="settings-info">
+        Создай <b>Personal Access Token (classic)</b> на GitHub:<br>
+        Settings &rarr; Developer settings &rarr; Personal access tokens &rarr; Tokens (classic) &rarr; Generate new token<br>
+        Отметь только <b>gist</b>
+      </div>
+      <input class="search-input" id="ghTokenInput" type="password" placeholder="ghp_xxxxxxxxxxxx">
+      <button class="btn btn-primary btn-block" onclick="connectGist()" id="btnConnect" style="margin-top:8px">Подключить</button>
+      <div id="settingsError" style="color:var(--red);font-size:13px;margin-top:8px"></div>
+    `;
+  } else {
+    const last = localStorage.getItem(SYNC_KEY);
+    const syncStr = last ? new Date(last).toLocaleString('ru-RU') : 'никогда';
+    el.innerHTML = `
+      <div class="settings-connected">Подключено</div>
+      <div class="settings-field">Gist: ${getGistId().slice(0,12)}...</div>
+      <div class="settings-field" style="margin-bottom:16px">Синхронизация: ${syncStr}</div>
+      <button class="btn btn-primary btn-block" onclick="manualPull()" style="margin-bottom:8px">Загрузить из облака</button>
+      <button class="btn btn-ghost btn-block" onclick="manualPush()" style="margin-bottom:8px">Выгрузить в облако</button>
+      <button class="btn btn-red btn-block" onclick="disconnectGist()">Отключить</button>
+      <div id="settingsStatus" class="settings-syncing" style="display:none"></div>
+    `;
+  }
+}
+
+async function connectGist() {
+  const token = document.getElementById('ghTokenInput').value.trim();
+  if (!token) return;
+  const errEl = document.getElementById('settingsError');
+  const btn = document.getElementById('btnConnect');
+  btn.disabled = true;
+  errEl.textContent = 'Проверяю токен...';
+  errEl.style.color = 'var(--orange)';
+  try {
+    // Verify token
+    localStorage.setItem(TOKEN_KEY, token);
+    await gistRequest('GET', '/user');
+    // Create gist with current data
+    errEl.textContent = 'Создаю хранилище...';
+    const gistId = await createGist(getHistory());
+    localStorage.setItem(GIST_KEY, gistId);
+    localStorage.setItem(SYNC_KEY, new Date().toISOString());
+    renderSettings();
+    showToast('Подключено!');
+  } catch(e) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(GIST_KEY);
+    errEl.style.color = 'var(--red)';
+    errEl.textContent = 'Ошибка: ' + e.message;
+    btn.disabled = false;
+  }
+}
+
+async function manualPull() {
+  const status = document.getElementById('settingsStatus');
+  status.style.display = 'block';
+  status.textContent = 'Загружаю...';
+  try {
+    await syncFromCloud();
+    status.textContent = 'Готово!';
+    showToast('Загружено из облака');
+    setTimeout(() => { status.style.display = 'none'; }, 2000);
+    renderSettings();
+  } catch(e) {
+    status.textContent = 'Ошибка: ' + e.message;
+  }
+}
+
+async function manualPush() {
+  const status = document.getElementById('settingsStatus');
+  status.style.display = 'block';
+  status.textContent = 'Выгружаю...';
+  try {
+    await updateGistData(getHistory());
+    localStorage.setItem(SYNC_KEY, new Date().toISOString());
+    status.textContent = 'Готово!';
+    showToast('Выгружено в облако');
+    setTimeout(() => { status.style.display = 'none'; }, 2000);
+    renderSettings();
+  } catch(e) {
+    status.textContent = 'Ошибка: ' + e.message;
+  }
+}
+
+function disconnectGist() {
+  if (!confirm('Отключить синхронизацию? Локальные данные останутся.')) return;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(GIST_KEY);
+  localStorage.removeItem(SYNC_KEY);
+  renderSettings();
+  showToast('Отключено');
+}
+
+document.getElementById('modalSettings').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+// ═══════════════════════════════════
 //  INIT
 // ═══════════════════════════════════
 seedIfNeeded();
 currentWorkout = loadCurrent();
 renderHome();
+syncFromCloud(); // auto-pull on start
 </script>
 </body>
 </html>
