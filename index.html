@@ -133,14 +133,23 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 }
 .addset-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
+/* Last set info */
+.last-set-info {
+  background: var(--surface); border-radius: 8px; padding: 8px 12px;
+  margin: 8px 16px 0; font-size: 14px; color: var(--text2);
+  text-align: center; flex-shrink: 0;
+}
+.last-set-info .last-set-val { color: var(--green); font-weight: 700; }
+.last-set-info .prev-date { color: var(--orange); font-weight: 600; font-size: 12px; }
+
 /* Weight section */
 .weight-section {
   flex: 3; display: flex; flex-direction: column;
   align-items: center; justify-content: center; padding: 12px 16px;
 }
-.weight-adjust-row { display: flex; gap: 10px; margin: 8px 0; }
+.weight-adjust-row { display: flex; gap: 8px; margin: 8px 0; }
 .weight-adj {
-  width: 54px; height: 54px; border-radius: 50%;
+  width: 48px; height: 48px; border-radius: 50%;
   background: var(--surface2); border: 2px solid var(--surface3);
   color: var(--text); font-size: 13px; font-weight: 600;
   cursor: pointer; display: flex; align-items: center;
@@ -176,6 +185,7 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   font-variant-numeric: tabular-nums;
 }
 .reps-staging.empty { color: var(--text2); font-size: 20px; }
+.reps-staging.compound { color: var(--orange); }
 
 .reps-grid {
   display: grid;
@@ -184,7 +194,7 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   grid-auto-columns: 1fr;
   gap: 6px;
   flex: 1; min-height: 0;
-  width: 100%; max-width: 300px;
+  width: 100%; max-width: 340px;
   align-self: center;
 }
 .rep-btn {
@@ -199,28 +209,25 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 .rep-btn.custom-rep {
   font-size: 13px; color: var(--text2);
 }
+.rep-btn.plus-btn {
+  color: var(--orange); font-size: 22px;
+  border-color: var(--orange-dim);
+}
+.rep-btn.plus-btn:active { background: var(--orange); color: #000; }
 
-.reps-actions {
-  display: flex; gap: 10px; margin-top: 10px; flex-shrink: 0;
-  justify-content: center; align-items: center;
+/* Finish exercise button */
+.btn-finish-exercise {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: calc(100% - 32px); margin: 10px 16px;
+  padding: 14px; border: none; border-radius: 16px;
+  background: linear-gradient(135deg, var(--green), #43a047);
+  color: #000; font-size: 17px; font-weight: 700;
+  cursor: pointer; flex-shrink: 0;
+  transition: transform .1s;
+  box-shadow: 0 4px 15px rgba(102, 187, 106, 0.3);
+  margin-bottom: calc(10px + env(safe-area-inset-bottom));
 }
-.btn-plus {
-  width: 52px; height: 52px; border-radius: 50%;
-  background: var(--surface2); border: 2px solid var(--surface3);
-  color: var(--orange); font-size: 24px; font-weight: 700;
-  cursor: pointer; display: flex; align-items: center;
-  justify-content: center; transition: background .15s;
-}
-.btn-plus:active { background: var(--orange-dim); }
-.btn-plus:disabled { opacity: .3; }
-.btn-confirm {
-  flex: 1; max-width: 180px; height: 52px; border-radius: 26px;
-  background: var(--green); border: none;
-  color: #000; font-size: 16px; font-weight: 700;
-  cursor: pointer; transition: transform .1s;
-}
-.btn-confirm:active { transform: scale(0.97); }
-.btn-confirm:disabled { opacity: .3; }
+.btn-finish-exercise:active { transform: scale(0.97); }
 
 /* Toast */
 .toast {
@@ -248,6 +255,7 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   background: none; border: none; color: var(--red);
   font-size: 13px; cursor: pointer; opacity: .6; padding: 2px 6px;
 }
+.hist-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
 /* Text export modal */
 .text-modal {
@@ -347,15 +355,18 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
     <span style="color:var(--text2); font-size:13px" id="addSetInfo">Подход #1</span>
   </div>
   <div class="addset-body">
+    <div class="last-set-info" id="lastSetInfo" style="display:none"></div>
     <div class="weight-section">
       <div class="weight-adjust-row">
         <button class="weight-adj dec" onclick="adjustWeight(-10)">-10</button>
         <button class="weight-adj dec" onclick="adjustWeight(-5)">-5</button>
         <button class="weight-adj dec" onclick="adjustWeight(-2.5)">-2.5</button>
+        <button class="weight-adj dec" onclick="adjustWeight(-2)">-2</button>
       </div>
       <input type="number" inputmode="decimal" class="weight-input" id="weightInput" value="0" step="0.5" min="0">
       <div class="weight-label">кг</div>
       <div class="weight-adjust-row">
+        <button class="weight-adj inc" onclick="adjustWeight(2)">+2</button>
         <button class="weight-adj inc" onclick="adjustWeight(2.5)">+2.5</button>
         <button class="weight-adj inc" onclick="adjustWeight(5)">+5</button>
         <button class="weight-adj inc" onclick="adjustWeight(10)">+10</button>
@@ -367,11 +378,8 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
         <span class="reps-staging empty" id="repsStaging">&mdash;</span>
       </div>
       <div class="reps-grid" id="repsGrid"></div>
-      <div class="reps-actions">
-        <button class="btn-plus" id="btnRepsPlus" onclick="tapPlus()" disabled>+</button>
-        <button class="btn-confirm" id="btnConfirmSet" onclick="confirmSetFromStaging()" disabled>Готово</button>
-      </div>
     </div>
+    <button class="btn-finish-exercise" onclick="finishExercise()">&#10003; Завершить упражнение</button>
   </div>
 </div>
 
@@ -464,6 +472,7 @@ const CURRENT_KEY = 'wt_current';
 let currentWorkout = null;
 let addSetExIdx = -1;
 let repsStaging = ''; // e.g. '', '7', '7+', '7+2'
+let compoundMode = false;
 
 function getHistory() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
@@ -607,12 +616,12 @@ function cancelWorkout() {
 // ═══════════════════════════════════
 //  TEXT EXPORT
 // ═══════════════════════════════════
-async function exportWorkoutText() {
-  if (!currentWorkout || currentWorkout.exercises.length === 0) return;
-  const [y, m, d] = currentWorkout.date.split('-');
-  let text = `Тренировка ${currentWorkout.number} - ${d}.${m}\n\n`;
+async function exportWorkoutTextFromData(workout) {
+  if (!workout || workout.exercises.length === 0) return;
+  const [y, m, d] = workout.date.split('-');
+  let text = `Тренировка ${workout.number} - ${d}.${m}\n\n`;
 
-  for (const ex of currentWorkout.exercises) {
+  for (const ex of workout.exercises) {
     if (ex.sets.length === 0) continue;
     const allBW = ex.sets.every(s => !s.w || s.w === 0);
     if (allBW) {
@@ -638,6 +647,18 @@ async function exportWorkoutText() {
   } catch(e) {}
   // Fallback: show text modal
   showTextModal(trimmed);
+}
+
+async function exportWorkoutText() {
+  if (!currentWorkout || currentWorkout.exercises.length === 0) return;
+  await exportWorkoutTextFromData(currentWorkout);
+}
+
+async function exportHistoryWorkout(id) {
+  const h = getHistory();
+  const workout = h.find(w => w.id === id);
+  if (!workout) return;
+  await exportWorkoutTextFromData(workout);
 }
 
 function showToast(msg) {
@@ -679,18 +700,25 @@ function filterExercises() {
 
 function renderExercisePickerList(query) {
   const history = getHistory();
-  const names = new Set();
-  history.forEach(w => w.exercises.forEach(e => names.add(e.name)));
-  let list = [...names].sort();
+  // Deduplicate by normalized name, keep first encountered original name
+  const namesMap = new Map();
+  history.forEach(w => w.exercises.forEach(e => {
+    const norm = normalizeName(e.name);
+    if (!namesMap.has(norm)) namesMap.set(norm, e.name);
+  }));
+  let list = [...namesMap.values()].sort((a, b) => a.localeCompare(b, 'ru'));
   const q = query.trim().toLowerCase();
   if (q) list = list.filter(n => n.toLowerCase().includes(q));
 
+  // Store list for click handler
+  window._pickerList = list;
+
   const el = document.getElementById('exPickerList');
-  el.innerHTML = list.map(n =>
-    `<div class="ex-list-item" onclick="pickExercise('${esc(n)}')">${esc(n)}</div>`
+  el.innerHTML = list.map((n, i) =>
+    `<div class="ex-list-item" onclick="pickExercise(window._pickerList[${i}])">${esc(n)}</div>`
   ).join('');
 
-  const exact = list.find(n => n.toLowerCase() === q);
+  const exact = list.find(n => normalizeName(n) === normalizeName(query));
   document.getElementById('btnAddCustom').style.display = (q && !exact) ? 'block' : 'none';
 }
 
@@ -717,9 +745,10 @@ document.getElementById('modalPicker').addEventListener('click', function(e) {
 function openAddSet(exIdx) {
   addSetExIdx = exIdx;
   repsStaging = '';
+  compoundMode = false;
   const ex = currentWorkout.exercises[exIdx];
   document.getElementById('addSetExName').textContent = ex.name;
-  document.getElementById('addSetInfo').textContent = 'Подход #' + (ex.sets.length + 1);
+  updateSetCounter();
 
   // Default weight
   let defaultW = 0;
@@ -731,7 +760,7 @@ function openAddSet(exIdx) {
   }
   document.getElementById('weightInput').value = defaultW;
 
-  // Build reps grid (4-20 + custom), top-to-bottom order
+  // Build reps grid (4-20, +, ...)
   const grid = document.getElementById('repsGrid');
   grid.innerHTML = '';
   for (let i = 4; i <= 20; i++) {
@@ -741,6 +770,12 @@ function openAddSet(exIdx) {
     btn.onclick = () => tapRep(i);
     grid.appendChild(btn);
   }
+  // Plus button (compound mode)
+  const plusBtn = document.createElement('button');
+  plusBtn.className = 'rep-btn plus-btn';
+  plusBtn.textContent = '+';
+  plusBtn.onclick = tapPlus;
+  grid.appendChild(plusBtn);
   // Custom button
   const custom = document.createElement('button');
   custom.className = 'rep-btn custom-rep';
@@ -748,12 +783,16 @@ function openAddSet(exIdx) {
   custom.onclick = tapCustomRep;
   grid.appendChild(custom);
 
+  updateLastSetInfo();
   renderStaging();
   document.getElementById('addSetScreen').classList.add('open');
 }
 
 function closeAddSet() {
+  compoundMode = false;
+  repsStaging = '';
   document.getElementById('addSetScreen').classList.remove('open');
+  renderWorkout();
 }
 
 function adjustWeight(delta) {
@@ -763,22 +802,67 @@ function adjustWeight(delta) {
   inp.value = val;
 }
 
+function updateSetCounter() {
+  const ex = currentWorkout.exercises[addSetExIdx];
+  document.getElementById('addSetInfo').textContent = 'Подход #' + (ex.sets.length + 1);
+}
+
+function updateLastSetInfo() {
+  const ex = currentWorkout.exercises[addSetExIdx];
+  const el = document.getElementById('lastSetInfo');
+  if (ex.sets.length === 0) {
+    // Show previous exercise data from history
+    const prev = findPrevExercise(ex.name, getHistory());
+    if (prev) {
+      const prevSets = prev.sets.map(s =>
+        s.w > 0 ? `${fmtW(s.w)}\u00d7${s.r}` : `${s.r}`
+      ).join('  ');
+      el.innerHTML = `<span class="prev-date">${fmtDateDisplay(prev.date)}</span><br>${prevSets}`;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  } else {
+    const lastSet = ex.sets[ex.sets.length - 1];
+    const val = lastSet.w > 0 ? `${fmtW(lastSet.w)}kg \u00d7 ${lastSet.r}` : `${lastSet.r}`;
+    el.innerHTML = `Подход #${ex.sets.length}: <span class="last-set-val">${val}</span>`;
+    el.style.display = 'block';
+  }
+}
+
 // ═══════════════════════════════════
-//  REPS STAGING
+//  REPS LOGIC
 // ═══════════════════════════════════
 function tapRep(n) {
-  if (repsStaging.endsWith('+')) {
-    repsStaging += n;
+  if (compoundMode) {
+    // In compound mode: build the staging string
+    if (repsStaging === '' || repsStaging.endsWith('+')) {
+      repsStaging += n;
+    }
+    renderStaging();
+    // Auto-record when compound is complete (contains "+" and ends with a digit)
+    if (repsStaging.includes('+') && /\d$/.test(repsStaging)) {
+      recordCurrentSet();
+    }
   } else {
+    // Normal mode: immediately record the set
     repsStaging = '' + n;
+    recordCurrentSet();
   }
-  renderStaging();
 }
 
 function tapPlus() {
-  if (repsStaging && !repsStaging.endsWith('+')) {
-    repsStaging += '+';
+  if (!compoundMode) {
+    // Enter compound mode
+    compoundMode = true;
+    repsStaging = '';
     renderStaging();
+  } else {
+    // Already in compound mode: append "+" to staging
+    if (repsStaging && !repsStaging.endsWith('+')) {
+      repsStaging += '+';
+      renderStaging();
+    }
   }
 }
 
@@ -789,34 +873,44 @@ function tapCustomRep() {
   }
 }
 
-function renderStaging() {
-  const el = document.getElementById('repsStaging');
-  if (repsStaging) {
-    el.textContent = repsStaging;
-    el.classList.remove('empty');
-  } else {
-    el.innerHTML = '&mdash;';
-    el.classList.add('empty');
-  }
-
-  const canConfirm = repsStaging && !repsStaging.endsWith('+');
-  const canPlus = repsStaging && !repsStaging.endsWith('+');
-
-  const confirmBtn = document.getElementById('btnConfirmSet');
-  confirmBtn.disabled = !canConfirm;
-
-  const plusBtn = document.getElementById('btnRepsPlus');
-  plusBtn.disabled = !canPlus;
-}
-
-function confirmSetFromStaging() {
+function recordCurrentSet() {
   if (!repsStaging || repsStaging.endsWith('+')) return;
   const w = parseFloat(document.getElementById('weightInput').value) || 0;
   currentWorkout.exercises[addSetExIdx].sets.push({ w, r: repsStaging });
   saveCurrent();
   if ('vibrate' in navigator) navigator.vibrate(10);
+  showToast('Записано!');
+
+  // Reset for next set
+  repsStaging = '';
+  compoundMode = false;
+  updateSetCounter();
+  updateLastSetInfo();
+  renderStaging();
+}
+
+function finishExercise() {
+  // If there's a pending valid compound staging, record it
+  if (compoundMode && repsStaging && !repsStaging.endsWith('+')) {
+    recordCurrentSet();
+  }
   closeAddSet();
-  renderWorkout();
+}
+
+function renderStaging() {
+  const el = document.getElementById('repsStaging');
+  el.classList.remove('empty', 'compound');
+  if (compoundMode) {
+    el.classList.add('compound');
+    if (repsStaging) {
+      el.textContent = repsStaging;
+    } else {
+      el.textContent = '+';
+    }
+  } else {
+    el.innerHTML = '&mdash;';
+    el.classList.add('empty');
+  }
 }
 
 // ═══════════════════════════════════
@@ -829,7 +923,7 @@ function renderFullHistory() {
   el.innerHTML = [...h].reverse().map((w, i) => historyCardHTML(w, 'hist-' + i, true)).join('');
 }
 
-function historyCardHTML(w, idPrefix, showDelete) {
+function historyCardHTML(w, idPrefix, showActions) {
   const exNames = w.exercises.map(e => e.name).join(', ');
   let detailHTML = w.exercises.map(ex => {
     const setsStr = ex.sets.map(s =>
@@ -838,9 +932,14 @@ function historyCardHTML(w, idPrefix, showDelete) {
     return `<div class="hist-ex-name">${esc(ex.name)}</div><div class="hist-ex-sets">${setsStr}</div>`;
   }).join('');
 
-  const delHTML = showDelete
-    ? `<button class="hist-del" onclick="event.stopPropagation(); deleteHistoryWorkout(${w.id})">удалить</button>`
-    : '';
+  let actionsHTML = '';
+  if (showActions) {
+    actionsHTML = `<div class="hist-actions">
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); exportHistoryWorkout(${w.id})">Скопировать</button>
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); editHistoryWorkout(${w.id})">Редактировать</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation(); deleteHistoryWorkout(${w.id})">Удалить</button>
+    </div>`;
+  }
 
   return `<div class="card hist-card" onclick="toggleDetail('${idPrefix}')">
     <div style="display:flex;justify-content:space-between;align-items:start">
@@ -848,10 +947,9 @@ function historyCardHTML(w, idPrefix, showDelete) {
         <span class="hist-num">Тренировка #${w.number}</span>
         <span class="hist-date">&mdash; ${fmtDateDisplay(w.date)}</span>
       </div>
-      ${delHTML}
     </div>
     <div class="hist-exercises">${esc(exNames)}</div>
-    <div class="hist-detail" id="${idPrefix}">${detailHTML}</div>
+    <div class="hist-detail" id="${idPrefix}">${detailHTML}${actionsHTML}</div>
   </div>`;
 }
 
@@ -863,14 +961,47 @@ function deleteHistoryWorkout(id) {
   renderFullHistory();
 }
 
+function editHistoryWorkout(id) {
+  const h = getHistory();
+  const workout = h.find(w => w.id === id);
+  if (!workout) return;
+
+  if (currentWorkout) {
+    if (!confirm('Сохранить текущую тренировку и открыть выбранную для редактирования?')) return;
+    // Auto-save current workout
+    const valid = currentWorkout.exercises.filter(e => e.sets.length > 0);
+    if (valid.length > 0) {
+      const saved = { id: Date.now(), number: currentWorkout.number, date: currentWorkout.date, exercises: valid };
+      const hh = getHistory();
+      hh.push(saved);
+      saveHistory(hh);
+    }
+  }
+
+  // Load workout for editing
+  currentWorkout = {
+    number: workout.number,
+    date: workout.date,
+    exercises: JSON.parse(JSON.stringify(workout.exercises))
+  };
+  // Remove from history
+  saveHistory(getHistory().filter(w => w.id !== id));
+  saveCurrent();
+  showPage('workout');
+}
+
 // ═══════════════════════════════════
 //  HELPERS
 // ═══════════════════════════════════
+function normalizeName(name) {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 function findPrevExercise(name, history) {
-  const lower = name.toLowerCase();
+  const normalized = normalizeName(name);
   for (let i = history.length - 1; i >= 0; i--) {
     const w = history[i];
-    const ex = w.exercises.find(e => e.name.toLowerCase() === lower);
+    const ex = w.exercises.find(e => normalizeName(e.name) === normalized);
     if (ex) return { date: w.date, sets: ex.sets };
   }
   return null;
