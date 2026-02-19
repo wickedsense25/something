@@ -172,6 +172,7 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 .reps-section {
   flex: 5; display: flex; flex-direction: column;
   padding: 12px 16px; border-top: 1px solid var(--surface2);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
   min-height: 0;
 }
 .reps-top {
@@ -214,20 +215,20 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   border-color: var(--orange-dim);
 }
 .rep-btn.plus-btn:active { background: var(--orange); color: #000; }
-
-/* Finish exercise button */
-.btn-finish-exercise {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: calc(100% - 32px); margin: 10px 16px;
-  padding: 14px; border: none; border-radius: 16px;
-  background: linear-gradient(135deg, var(--green), #43a047);
-  color: #000; font-size: 17px; font-weight: 700;
-  cursor: pointer; flex-shrink: 0;
-  transition: transform .1s;
-  box-shadow: 0 4px 15px rgba(102, 187, 106, 0.3);
-  margin-bottom: calc(10px + env(safe-area-inset-bottom));
+.rep-btn.finish-btn {
+  color: var(--green); font-size: 24px;
+  border-color: var(--green);
+  background: rgba(102, 187, 106, 0.1);
 }
-.btn-finish-exercise:active { transform: scale(0.97); }
+.rep-btn.finish-btn:active { background: var(--green); color: #000; }
+
+/* Animated dots */
+.dots-anim { display: inline-block; margin-left: 2px; }
+.dots-anim span { opacity: 0; animation: dotPulse 1.4s infinite; }
+.dots-anim span:nth-child(1) { animation-delay: 0s; }
+.dots-anim span:nth-child(2) { animation-delay: 0.2s; }
+.dots-anim span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotPulse { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
 
 /* Toast */
 .toast {
@@ -379,7 +380,6 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
       </div>
       <div class="reps-grid" id="repsGrid"></div>
     </div>
-    <button class="btn-finish-exercise" onclick="finishExercise()">&#10003; Завершить упражнение</button>
   </div>
 </div>
 
@@ -782,6 +782,12 @@ function openAddSet(exIdx) {
   custom.textContent = '...';
   custom.onclick = tapCustomRep;
   grid.appendChild(custom);
+  // Finish exercise button (checkmark)
+  const finishBtn = document.createElement('button');
+  finishBtn.className = 'rep-btn finish-btn';
+  finishBtn.innerHTML = '&#10003;';
+  finishBtn.onclick = finishExercise;
+  grid.appendChild(finishBtn);
 
   updateLastSetInfo();
   renderStaging();
@@ -823,9 +829,10 @@ function updateLastSetInfo() {
       el.style.display = 'none';
     }
   } else {
-    const lastSet = ex.sets[ex.sets.length - 1];
-    const val = lastSet.w > 0 ? `${fmtW(lastSet.w)}kg \u00d7 ${lastSet.r}` : `${lastSet.r}`;
-    el.innerHTML = `Подход #${ex.sets.length}: <span class="last-set-val">${val}</span>`;
+    const setsStr = ex.sets.map(s =>
+      s.w > 0 ? `<span class="last-set-val">${fmtW(s.w)}\u00d7${s.r}</span>` : `<span class="last-set-val">${s.r}</span>`
+    ).join(', ');
+    el.innerHTML = `${setsStr}<span class="dots-anim"><span>.</span><span>.</span><span>.</span></span>`;
     el.style.display = 'block';
   }
 }
