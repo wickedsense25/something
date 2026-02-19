@@ -560,8 +560,13 @@ function loadCurrent() {
   try { return JSON.parse(localStorage.getItem(CURRENT_KEY)); } catch { return null; }
 }
 function seedIfNeeded() {
-  if (localStorage.getItem(STORAGE_KEY)) return;
-  saveHistory(SEED_DATA);
+  const history = getHistory();
+  if (history.length === 0) { saveHistory(SEED_DATA); return; }
+  const existingIds = new Set(history.map(w => w.id));
+  const missing = SEED_DATA.filter(s => !existingIds.has(s.id));
+  if (missing.length > 0) {
+    saveHistory([...missing, ...history].sort((a, b) => a.number - b.number));
+  }
 }
 
 // ═══════════════════════════════════
