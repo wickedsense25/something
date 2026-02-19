@@ -137,10 +137,17 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 .last-set-info {
   background: var(--surface); border-radius: 8px; padding: 8px 12px;
   margin: 8px 16px 0; font-size: 14px; color: var(--text2);
-  text-align: center; flex-shrink: 0;
+  flex-shrink: 0;
 }
 .last-set-info .last-set-val { color: var(--green); font-weight: 700; }
 .last-set-info .prev-date { color: var(--orange); font-weight: 600; font-size: 12px; }
+.last-set-row { display: flex; align-items: center; gap: 8px; }
+.last-set-content { flex: 1; min-width: 0; text-align: center; }
+.del-last-set {
+  background: none; border: none; color: var(--red);
+  font-size: 18px; cursor: pointer; padding: 0 2px;
+  opacity: 0.6; flex-shrink: 0;
+}
 
 /* Weight section */
 .weight-section {
@@ -258,6 +265,24 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 }
 .hist-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
+/* Dictionary */
+.dict-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--surface2);
+  cursor: pointer; font-size: 14px;
+}
+.dict-item input[type="checkbox"] {
+  width: 20px; height: 20px; accent-color: var(--primary); flex-shrink: 0;
+}
+.dict-name { flex: 1; min-width: 0; }
+.dict-count {
+  color: var(--text2); font-size: 12px;
+  background: var(--surface2); border-radius: 10px;
+  padding: 2px 8px; flex-shrink: 0;
+}
+.dict-merge-names { margin-top: 10px; }
+.dict-merge-names .btn { margin-bottom: 6px; text-align: left; justify-content: flex-start; }
+
 /* Text export modal */
 .text-modal {
   display: none; position: fixed; inset: 0;
@@ -303,7 +328,10 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   <button class="btn btn-primary btn-block" onclick="startNewWorkout()" id="btnStart" style="margin-bottom:20px">
     Начать тренировку
   </button>
-  <h2 style="font-size:16px; color:var(--text2); margin-bottom:12px;">История</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h2 style="font-size:16px; color:var(--text2); margin:0">История</h2>
+    <button style="background:none;border:none;color:var(--primary);font-size:13px;cursor:pointer" onclick="openDictionary()">Справочник</button>
+  </div>
   <div id="homeHistory"></div>
 </div>
 
@@ -391,6 +419,19 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   </div>
 </div>
 
+<!-- ═══════ MODAL: Exercise Dictionary ═══════ -->
+<div class="modal-bg" id="modalDict">
+  <div class="modal">
+    <h2>Справочник упражнений</h2>
+    <input class="search-input" id="dictSearchInput" placeholder="Поиск..." oninput="renderDictionary(this.value)">
+    <div id="dictList"></div>
+    <div id="dictMergeBar" style="display:none;margin-top:12px">
+      <button class="btn btn-primary btn-block" id="dictMergeBtn">Склеить</button>
+      <div class="dict-merge-names" id="dictMergeNames" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════ MODAL: Text export fallback ═══════ -->
 <div class="text-modal" id="textModal">
   <div class="text-modal-body">
@@ -420,6 +461,35 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 //  SEED DATA
 // ═══════════════════════════════════
 const SEED_DATA = [
+  {
+    id: -3, number: 31, date: '2025-12-16',
+    exercises: [
+      { name: 'Pull Ups', sets: [{w:0,r:'12'},{w:0,r:'8'},{w:0,r:'7'}] },
+      { name: 'Тяга штанги к поясу', sets: [{w:40,r:'15'},{w:45,r:'15'},{w:50,r:'11'},{w:55,r:'8'}] },
+      { name: 'Yellow Pull Down', sets: [{w:50,r:'15'},{w:55,r:'15'},{w:60,r:'15'},{w:65,r:'10'}] },
+      { name: 'Разгибание одной руки над головой с гантелью', sets: [{w:8,r:'15'},{w:10,r:'15'},{w:12,r:'11'}] },
+      { name: 'Трицепс в блоке прямой (чуть изогнутой V) рукоятью', sets: [{w:20,r:'15'},{w:22.5,r:'15'},{w:25,r:'10'}] }
+    ]
+  },
+  {
+    id: -2, number: 32, date: '2025-12-17',
+    exercises: [
+      { name: 'Yellow Wide Chest Press', sets: [{w:40,r:'15'},{w:50,r:'15'},{w:60,r:'15'},{w:70,r:'15'}] },
+      { name: 'Butterfly 1 wing', sets: [{w:20,r:'15'},{w:22.5,r:'15'},{w:25,r:'10'}] },
+      { name: 'Chest Dips', sets: [{w:0,r:'16'},{w:0,r:'18'},{w:0,r:'14'}] },
+      { name: 'DB Curls', sets: [{w:16,r:'15'},{w:16,r:'10'},{w:16,r:'9'},{w:16,r:'8'}] },
+      { name: 'Hammers', sets: [{w:14,r:'11'},{w:14,r:'10'},{w:14,r:'10'},{w:14,r:'9'}] }
+    ]
+  },
+  {
+    id: -1, number: 33, date: '2025-12-18',
+    exercises: [
+      { name: 'Yellow Shoulder Press', sets: [{w:50,r:'15'},{w:60,r:'15'},{w:65,r:'10'},{w:70,r:'8'}] },
+      { name: 'Delts Machine', sets: [{w:20,r:'15'},{w:25,r:'15'},{w:30,r:'10'},{w:30,r:'10'}] },
+      { name: 'Abs Crunches', sets: [{w:12,r:'15'},{w:16,r:'15'},{w:20,r:'15'},{w:24,r:'8'}] },
+      { name: 'Toes To Bar', sets: [{w:0,r:'20'},{w:0,r:'11'},{w:0,r:'10'}] }
+    ]
+  },
   {
     id: 1, number: 35, date: '2026-02-03',
     exercises: [
@@ -471,8 +541,9 @@ const CURRENT_KEY = 'wt_current';
 // ═══════════════════════════════════
 let currentWorkout = null;
 let addSetExIdx = -1;
-let repsStaging = ''; // e.g. '', '7', '7+', '7+2'
+let repsStaging = '';
 let compoundMode = false;
+let dictSelected = new Set();
 
 function getHistory() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
@@ -601,6 +672,7 @@ function finishWorkout() {
   saveHistory(h);
   currentWorkout = null;
   saveCurrent();
+  showToast('Тренировка сохранена!');
   showPage('home');
 }
 
@@ -635,17 +707,14 @@ async function exportWorkoutTextFromData(workout) {
 
   const trimmed = text.trim();
 
-  // Try native share (best for mobile)
   if (navigator.share) {
     try { await navigator.share({ text: trimmed }); return; } catch(e) {}
   }
-  // Try clipboard
   try {
     await navigator.clipboard.writeText(trimmed);
     showToast('Скопировано!');
     return;
   } catch(e) {}
-  // Fallback: show text modal
   showTextModal(trimmed);
 }
 
@@ -700,7 +769,6 @@ function filterExercises() {
 
 function renderExercisePickerList(query) {
   const history = getHistory();
-  // Deduplicate by normalized name, keep first encountered original name
   const namesMap = new Map();
   history.forEach(w => w.exercises.forEach(e => {
     const norm = normalizeName(e.name);
@@ -710,7 +778,6 @@ function renderExercisePickerList(query) {
   const q = query.trim().toLowerCase();
   if (q) list = list.filter(n => n.toLowerCase().includes(q));
 
-  // Store list for click handler
   window._pickerList = list;
 
   const el = document.getElementById('exPickerList');
@@ -750,7 +817,6 @@ function openAddSet(exIdx) {
   document.getElementById('addSetExName').textContent = ex.name;
   updateSetCounter();
 
-  // Default weight
   let defaultW = 0;
   if (ex.sets.length > 0) {
     defaultW = ex.sets[ex.sets.length - 1].w;
@@ -760,7 +826,6 @@ function openAddSet(exIdx) {
   }
   document.getElementById('weightInput').value = defaultW;
 
-  // Build reps grid (4-20, +, ...)
   const grid = document.getElementById('repsGrid');
   grid.innerHTML = '';
   for (let i = 4; i <= 20; i++) {
@@ -770,19 +835,16 @@ function openAddSet(exIdx) {
     btn.onclick = () => tapRep(i);
     grid.appendChild(btn);
   }
-  // Plus button (compound mode)
   const plusBtn = document.createElement('button');
   plusBtn.className = 'rep-btn plus-btn';
   plusBtn.textContent = '+';
   plusBtn.onclick = tapPlus;
   grid.appendChild(plusBtn);
-  // Custom button
   const custom = document.createElement('button');
   custom.className = 'rep-btn custom-rep';
   custom.textContent = '...';
   custom.onclick = tapCustomRep;
   grid.appendChild(custom);
-  // Finish exercise button (checkmark)
   const finishBtn = document.createElement('button');
   finishBtn.className = 'rep-btn finish-btn';
   finishBtn.innerHTML = '&#10003;';
@@ -817,7 +879,6 @@ function updateLastSetInfo() {
   const ex = currentWorkout.exercises[addSetExIdx];
   const el = document.getElementById('lastSetInfo');
   if (ex.sets.length === 0) {
-    // Show previous exercise data from history
     const prev = findPrevExercise(ex.name, getHistory());
     if (prev) {
       const prevSets = prev.sets.map(s =>
@@ -832,9 +893,18 @@ function updateLastSetInfo() {
     const setsStr = ex.sets.map(s =>
       s.w > 0 ? `<span class="last-set-val">${fmtW(s.w)}\u00d7${s.r}</span>` : `<span class="last-set-val">${s.r}</span>`
     ).join(', ');
-    el.innerHTML = `${setsStr}<span class="dots-anim"><span>.</span><span>.</span><span>.</span></span>`;
+    el.innerHTML = `<div class="last-set-row"><div class="last-set-content">${setsStr}<span class="dots-anim"><span>.</span><span>.</span><span>.</span></span></div><button class="del-last-set" onclick="deleteLastSet()">&times;</button></div>`;
     el.style.display = 'block';
   }
+}
+
+function deleteLastSet() {
+  const ex = currentWorkout.exercises[addSetExIdx];
+  if (ex.sets.length === 0) return;
+  ex.sets.pop();
+  saveCurrent();
+  updateSetCounter();
+  updateLastSetInfo();
 }
 
 // ═══════════════════════════════════
@@ -842,17 +912,14 @@ function updateLastSetInfo() {
 // ═══════════════════════════════════
 function tapRep(n) {
   if (compoundMode) {
-    // In compound mode: build the staging string
     if (repsStaging === '' || repsStaging.endsWith('+')) {
       repsStaging += n;
     }
     renderStaging();
-    // Auto-record when compound is complete (contains "+" and ends with a digit)
     if (repsStaging.includes('+') && /\d$/.test(repsStaging)) {
       recordCurrentSet();
     }
   } else {
-    // Normal mode: immediately record the set
     repsStaging = '' + n;
     recordCurrentSet();
   }
@@ -860,12 +927,10 @@ function tapRep(n) {
 
 function tapPlus() {
   if (!compoundMode) {
-    // Enter compound mode
     compoundMode = true;
     repsStaging = '';
     renderStaging();
   } else {
-    // Already in compound mode: append "+" to staging
     if (repsStaging && !repsStaging.endsWith('+')) {
       repsStaging += '+';
       renderStaging();
@@ -888,7 +953,6 @@ function recordCurrentSet() {
   if ('vibrate' in navigator) navigator.vibrate(10);
   showToast('Записано!');
 
-  // Reset for next set
   repsStaging = '';
   compoundMode = false;
   updateSetCounter();
@@ -897,7 +961,6 @@ function recordCurrentSet() {
 }
 
 function finishExercise() {
-  // If there's a pending valid compound staging, record it
   if (compoundMode && repsStaging && !repsStaging.endsWith('+')) {
     recordCurrentSet();
   }
@@ -975,7 +1038,6 @@ function editHistoryWorkout(id) {
 
   if (currentWorkout) {
     if (!confirm('Сохранить текущую тренировку и открыть выбранную для редактирования?')) return;
-    // Auto-save current workout
     const valid = currentWorkout.exercises.filter(e => e.sets.length > 0);
     if (valid.length > 0) {
       const saved = { id: Date.now(), number: currentWorkout.number, date: currentWorkout.date, exercises: valid };
@@ -985,17 +1047,157 @@ function editHistoryWorkout(id) {
     }
   }
 
-  // Load workout for editing
   currentWorkout = {
     number: workout.number,
     date: workout.date,
     exercises: JSON.parse(JSON.stringify(workout.exercises))
   };
-  // Remove from history
   saveHistory(getHistory().filter(w => w.id !== id));
   saveCurrent();
   showPage('workout');
 }
+
+// ═══════════════════════════════════
+//  EXERCISE DICTIONARY
+// ═══════════════════════════════════
+function openDictionary() {
+  dictSelected.clear();
+  document.getElementById('dictSearchInput').value = '';
+  document.getElementById('dictMergeNames').style.display = 'none';
+  renderDictionary('');
+  document.getElementById('modalDict').classList.add('open');
+}
+
+function renderDictionary(query) {
+  const history = getHistory();
+  const exerciseMap = new Map();
+  history.forEach(w => {
+    const seen = new Set();
+    w.exercises.forEach(e => {
+      const norm = normalizeName(e.name);
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        if (!exerciseMap.has(norm)) exerciseMap.set(norm, { name: e.name, count: 0 });
+        exerciseMap.get(norm).count++;
+      }
+    });
+  });
+
+  let list = [...exerciseMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  const q = (query || '').trim().toLowerCase();
+  if (q) list = list.filter(item => item.name.toLowerCase().includes(q));
+
+  window._dictItems = list;
+
+  const el = document.getElementById('dictList');
+  el.innerHTML = list.map((item, i) => {
+    const norm = normalizeName(item.name);
+    const checked = dictSelected.has(norm) ? 'checked' : '';
+    return `<label class="dict-item">
+      <input type="checkbox" ${checked} onchange="toggleDictItem(${i}, this.checked)">
+      <span class="dict-name">${esc(item.name)}</span>
+      <span class="dict-count">${item.count}</span>
+    </label>`;
+  }).join('');
+
+  updateDictBar();
+}
+
+function toggleDictItem(idx, checked) {
+  const norm = normalizeName(window._dictItems[idx].name);
+  if (checked) dictSelected.add(norm);
+  else dictSelected.delete(norm);
+  document.getElementById('dictMergeNames').style.display = 'none';
+  updateDictBar();
+}
+
+function updateDictBar() {
+  const bar = document.getElementById('dictMergeBar');
+  const btn = document.getElementById('dictMergeBtn');
+  if (dictSelected.size === 1) {
+    bar.style.display = 'block';
+    btn.textContent = 'Переименовать';
+    btn.onclick = renameExercise;
+  } else if (dictSelected.size >= 2) {
+    bar.style.display = 'block';
+    btn.textContent = 'Склеить выбранные (' + dictSelected.size + ')';
+    btn.onclick = startMerge;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function renameExercise() {
+  const items = window._dictItems;
+  const selected = items.find(item => dictSelected.has(normalizeName(item.name)));
+  if (!selected) return;
+  const newName = prompt('Новое название:', selected.name);
+  if (!newName || !newName.trim() || newName.trim() === selected.name) return;
+
+  const history = getHistory();
+  const oldNorm = normalizeName(selected.name);
+  history.forEach(w => {
+    w.exercises.forEach(e => {
+      if (normalizeName(e.name) === oldNorm) e.name = newName.trim();
+    });
+  });
+  saveHistory(history);
+
+  if (currentWorkout) {
+    currentWorkout.exercises.forEach(e => {
+      if (normalizeName(e.name) === oldNorm) e.name = newName.trim();
+    });
+    saveCurrent();
+  }
+
+  dictSelected.clear();
+  renderDictionary(document.getElementById('dictSearchInput').value);
+  showToast('Переименовано!');
+}
+
+function startMerge() {
+  const items = window._dictItems;
+  const selected = items.filter(item => dictSelected.has(normalizeName(item.name)));
+
+  window._mergeSelected = selected;
+
+  const el = document.getElementById('dictMergeNames');
+  el.innerHTML = '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">Оставить название:</div>' +
+    selected.map((item, i) =>
+      `<button class="btn btn-ghost btn-block btn-sm" style="margin-bottom:6px;text-align:left;justify-content:flex-start" onclick="executeMerge(${i})">${esc(item.name)}</button>`
+    ).join('');
+  el.style.display = 'block';
+}
+
+function executeMerge(keepIdx) {
+  const keep = window._mergeSelected[keepIdx];
+  const others = window._mergeSelected.filter((_, i) => i !== keepIdx);
+  const otherNorms = new Set(others.map(o => normalizeName(o.name)));
+
+  const history = getHistory();
+  history.forEach(w => {
+    w.exercises.forEach(e => {
+      if (otherNorms.has(normalizeName(e.name))) e.name = keep.name;
+    });
+  });
+  saveHistory(history);
+
+  if (currentWorkout) {
+    currentWorkout.exercises.forEach(e => {
+      if (otherNorms.has(normalizeName(e.name))) e.name = keep.name;
+    });
+    saveCurrent();
+  }
+
+  dictSelected.clear();
+  document.getElementById('dictMergeNames').style.display = 'none';
+  renderDictionary(document.getElementById('dictSearchInput').value);
+  showToast('Упражнения объединены!');
+}
+
+document.getElementById('modalDict').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
 
 // ═══════════════════════════════════
 //  HELPERS
@@ -1083,7 +1285,6 @@ async function updateGistData(data) {
   });
 }
 
-// Auto-push: save local history to Gist (non-blocking)
 async function syncToCloud() {
   if (!isConnected()) return;
   try {
@@ -1092,13 +1293,11 @@ async function syncToCloud() {
   } catch(e) { console.error('Sync push failed:', e); }
 }
 
-// Auto-pull: load from Gist on app start
 async function syncFromCloud() {
   if (!isConnected()) return;
   try {
     const remote = await loadGistData();
     if (remote && remote.length > 0) {
-      // Merge: union by workout id, remote wins for same id
       const local = getHistory();
       const merged = new Map();
       local.forEach(w => merged.set(w.id, w));
@@ -1106,7 +1305,6 @@ async function syncFromCloud() {
       const result = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
       localStorage.setItem(SYNC_KEY, new Date().toISOString());
-      // Re-render
       const active = document.querySelector('.page.active');
       if (active) showPage(active.id.replace('page-', ''));
     }
@@ -1156,10 +1354,8 @@ async function connectGist() {
   errEl.textContent = 'Проверяю токен...';
   errEl.style.color = 'var(--orange)';
   try {
-    // Verify token
     localStorage.setItem(TOKEN_KEY, token);
     await gistRequest('GET', '/user');
-    // Create gist with current data
     errEl.textContent = 'Создаю хранилище...';
     const gistId = await createGist(getHistory());
     localStorage.setItem(GIST_KEY, gistId);
@@ -1225,7 +1421,7 @@ document.getElementById('modalSettings').addEventListener('click', function(e) {
 seedIfNeeded();
 currentWorkout = loadCurrent();
 renderHome();
-syncFromCloud(); // auto-pull on start
+syncFromCloud();
 </script>
 </body>
 </html>
