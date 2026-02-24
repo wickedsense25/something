@@ -312,6 +312,87 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   font-size: 22px; cursor: pointer; padding: 4px 8px;
 }
 
+/* Unified set chips */
+.ex-prev .ex-sets-row { margin-bottom: 0; }
+.set-chip.prev-chip {
+  background: rgba(255,255,255,0.04);
+  cursor: default; font-size: 13px; padding: 4px 8px;
+}
+.set-chip.prev-chip:active { background: rgba(255,255,255,0.04); }
+.set-chip.prev-chip .sw { color: var(--text2); }
+.set-chip.prev-chip .sr { color: var(--text2); }
+.set-chip.current-chip { border-left: 2px solid var(--primary); }
+
+/* ER badge & chips */
+.er-badge {
+  background: var(--orange); color: #000;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 5px; border-radius: 4px;
+  margin-left: 6px; vertical-align: middle;
+}
+.er-chip .er-fmt { color: var(--orange); font-size: 12px; }
+
+/* ER screen */
+.er-top-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px; flex-shrink: 0; border-bottom: 1px solid var(--surface2);
+}
+.er-stopwatch-wrap { display: flex; align-items: center; gap: 10px; }
+.er-stopwatch {
+  font-size: 36px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums; min-width: 80px;
+}
+.er-restart-btn {
+  background: none; border: 2px solid var(--surface3);
+  color: var(--text2); font-size: 20px; cursor: pointer;
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.er-restart-btn:active { background: var(--surface2); }
+.er-set-counter { font-size: 15px; color: var(--text2); font-weight: 600; }
+.er-remaining-section { padding: 16px; text-align: center; flex-shrink: 0; }
+.er-remaining-num { font-size: 48px; font-weight: 700; color: var(--primary); }
+.er-remaining-label { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.er-progress-bar {
+  height: 6px; background: var(--surface2); border-radius: 3px;
+  margin: 10px 0; overflow: hidden;
+}
+.er-progress-fill {
+  height: 100%; background: var(--green); border-radius: 3px;
+  transition: width .3s;
+}
+.er-log {
+  padding: 0 16px 8px; font-size: 14px; color: var(--text2);
+  text-align: center; flex-shrink: 0; min-height: 22px;
+}
+.er-log b { color: var(--green); }
+.er-reps-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; padding: 8px 16px; flex: 1;
+  align-content: center; max-width: 340px;
+  align-self: center; width: 100%;
+}
+.er-finish-bar {
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+.er-initial-section {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 20px 16px;
+}
+.er-initial-num { font-size: 80px; font-weight: 700; color: var(--primary); }
+.er-initial-label { font-size: 16px; color: var(--text2); margin-top: 4px; }
+.er-initial-adj { display: flex; gap: 12px; margin-top: 24px; }
+.swipe-hint {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; color: var(--orange); opacity: 0;
+  transition: opacity .2s; pointer-events: none;
+}
+.ex-list-item { position: relative; overflow: hidden; }
+.ex-list-item.swiping .swipe-hint { opacity: 1; }
+.ex-list-item.swiping { background: rgba(255,152,0,0.08); }
+
 @media (min-width: 500px) {
   .page, .addset-body { max-width: 500px; margin-left: auto; margin-right: auto; }
 }
@@ -411,6 +492,16 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   </div>
 </div>
 
+<!-- ═══════ FULLSCREEN: ER Mode ═══════ -->
+<div class="addset-screen" id="erScreen">
+  <div class="addset-header">
+    <button class="addset-back" onclick="closeER()">&#8592; Назад</button>
+    <h3 id="erExName">Exercise</h3>
+    <span style="color:var(--orange); font-size:13px; font-weight:700">ER</span>
+  </div>
+  <div class="addset-body" id="erBody"></div>
+</div>
+
 <!-- ═══════ MODAL: Settings ═══════ -->
 <div class="modal-bg" id="modalSettings">
   <div class="modal">
@@ -462,6 +553,103 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 // ═══════════════════════════════════
 const SEED_DATA = [
   {
+    id: -21, number: 21, date: '2025-12-02',
+    exercises: [
+      { name: 'Yellow Shoulder Press', sets: [{w:40,r:'15'},{w:45,r:'15'},{w:50,r:'15'},{w:55,r:'12'},{w:60,r:'8'}] },
+      { name: 'Махи гантелями в стороны', sets: [{w:8,r:'15'},{w:9,r:'15'},{w:10,r:'15'},{w:12,r:'8'}] },
+      { name: 'Toes to Bar', sets: [{w:0,r:'15'},{w:0,r:'10'},{w:0,r:'8'},{w:0,r:'6'}] },
+      { name: 'Face Pulls', sets: [{w:10,r:'15'},{w:12.5,r:'15'},{w:15,r:'15'},{w:15,r:'15'}] }
+    ]
+  },
+  {
+    id: -22, number: 22, date: '2025-12-03',
+    exercises: [
+      { name: 'Dips Chest', sets: [{w:0,r:'15'},{w:0,r:'17'},{w:0,r:'15'},{w:0,r:'12'}] },
+      { name: 'Yellow Wide Chest Press', sets: [{w:50,r:'15'},{w:60,r:'15'},{w:70,r:'12'},{w:75,r:'9'}] },
+      { name: 'DB Curls', sets: [{w:14,r:'15'},{w:14,r:'12'},{w:14,r:'10'},{w:14,r:'8'}] },
+      { name: 'Hammers', sets: [{w:12,r:'15'},{w:12,r:'12'},{w:12,r:'12'},{w:12,r:'10'}] }
+    ]
+  },
+  {
+    id: -23, number: 23, date: '2025-12-04',
+    exercises: [
+      { name: 'Pull Ups', sets: [{w:0,r:'12'},{w:0,r:'9'},{w:0,r:'7'}] },
+      { name: 'Yellow Low Row', sets: [{w:40,r:'10'},{w:40,r:'10'},{w:40,r:'10'}] },
+      { name: 'Yellow Pull Down', sets: [{w:40,r:'15'},{w:50,r:'15'},{w:60,r:'15'}] },
+      { name: 'Трицепс в блоке прямой (чуть изогнутой V) рукоятью', sets: [{w:20,r:'15'},{w:22.5,r:'15'},{w:25,r:'10'},{w:27.5,r:'7'}] },
+      { name: 'Разгибание одной руки над головой с гантелью', sets: [{w:8,r:'12'},{w:9,r:'10'},{w:10,r:'9'},{w:7,r:'15'}] },
+      { name: 'Abs Crunches', sets: [{w:6,r:'16'},{w:8,r:'15'},{w:10,r:'15'},{w:12,r:'15'},{w:16,r:'9'}] }
+    ]
+  },
+  {
+    id: -24, number: 24, date: '2025-12-08',
+    exercises: [
+      { name: 'Kettlebell Squats', sets: [{w:16,r:'15'},{w:20,r:'15'},{w:24,r:'15'},{w:28,r:'13'}] },
+      { name: 'Yellow Rear Kick', sets: [{w:10,r:'15'},{w:15,r:'15'},{w:15,r:'15'},{w:17.5,r:'12'}] },
+      { name: 'Hyperextension', sets: [{w:0,r:'15'},{w:5,r:'12'},{w:5,r:'10'},{w:5,r:'10'}] },
+      { name: 'Toes to Bar', sets: [{w:0,r:'16'},{w:0,r:'10'},{w:0,r:'8'},{w:0,r:'6'}] }
+    ]
+  },
+  {
+    id: -25, number: 25, date: '2025-12-09',
+    exercises: [
+      { name: 'Incline Chest Press', sets: [{w:50,r:'15'},{w:55,r:'13'},{w:60,r:'9'},{w:60,r:'8'}] },
+      { name: 'Dips Chest', sets: [{w:0,r:'18'},{w:0,r:'17'},{w:0,r:'12'},{w:0,r:'12'}] },
+      { name: 'Butterfly 1 wing', sets: [{w:15,r:'15'},{w:20,r:'15'},{w:22,r:'10'}] },
+      { name: 'DB Curls', sets: [{w:16,r:'14'},{w:16,r:'9'},{w:16,r:'8'},{w:16,r:'8'}] },
+      { name: 'Hammers', sets: [{w:14,r:'10'},{w:14,r:'9'},{w:14,r:'8'},{w:14,r:'8'}] }
+    ]
+  },
+  {
+    id: -26, number: 26, date: '2025-12-10',
+    exercises: [
+      { name: 'Махи гантелями в стороны', sets: [{w:12,r:'13'},{w:12,r:'12'},{w:12,r:'12'},{w:12,r:'10'}] },
+      { name: 'Подъем штанги над головой', sets: [{w:20,r:'15'},{w:25,r:'15'},{w:30,r:'12'},{w:35,r:'8'}] },
+      { name: 'Присед со штангой', sets: [{w:20,r:'15'},{w:30,r:'15'},{w:40,r:'15'},{w:40,r:'12'}] },
+      { name: 'Abs Crunches', sets: [{w:8,r:'16'},{w:10,r:'15'},{w:12,r:'15'},{w:16,r:'15'},{w:20,r:'8'}] }
+    ]
+  },
+  {
+    id: -27, number: 27, date: '2025-12-11',
+    exercises: [
+      { name: 'Pull Ups', sets: [{w:0,r:'11'},{w:0,r:'8'},{w:0,r:'7'}] },
+      { name: 'Yellow Row 1 hand', sets: [{w:20,r:'15'},{w:30,r:'12'}] },
+      { name: 'Yellow Pull Down', sets: [{w:50,r:'15'},{w:55,r:'11'},{w:55,r:'9'}] },
+      { name: 'Pulley', sets: [{w:25,r:'15'},{w:30,r:'13'},{w:35,r:'8'}] },
+      { name: 'Жим штанги узким хватом', sets: [{w:40,r:'15'},{w:45,r:'15'},{w:50,r:'15'}] },
+      { name: 'Разгибание одной руки над головой с гантелью', sets: [{w:8,r:'15'},{w:8,r:'15'},{w:8,r:'15'}] }
+    ]
+  },
+  {
+    id: -28, number: 28, date: '2025-12-12',
+    exercises: [
+      { name: 'Black Chest Press', sets: [{w:45,r:'15'},{w:55,r:'15'},{w:65,r:'9'}] },
+      { name: 'Yellow Incline Chest Press', sets: [{w:45,r:'15'},{w:50,r:'9'},{w:50,r:'10'}] },
+      { name: 'Barbell Curl', sets: [{w:25,r:'15'},{w:25,r:'15'},{w:25,r:'10'}] },
+      { name: 'Butterfly 2 hands', sets: [{w:15,r:'15'},{w:20,r:'15'},{w:25,r:'8'}] },
+      { name: 'Reverse Fly', sets: [{w:5,r:'15'},{w:10,r:'15'},{w:15,r:'6'}] }
+    ]
+  },
+  {
+    id: -29, number: 29, date: '2025-12-13',
+    exercises: [
+      { name: 'Toes to Bar', sets: [{w:0,r:'17'},{w:0,r:'12'},{w:0,r:'10'},{w:0,r:'8'}] },
+      { name: 'Yellow Shoulder Press', sets: [{w:50,r:'15'},{w:55,r:'15'},{w:60,r:'12'},{w:65,r:'8'}] },
+      { name: 'Squats', sets: [{w:20,r:'15'},{w:30,r:'15'},{w:40,r:'15'},{w:45,r:'10'}] },
+      { name: 'Arnold Press', sets: [{w:8,r:'15'},{w:10,r:'15'},{w:12,r:'15'},{w:14,r:'6'}] },
+      { name: 'Abs Crunches', sets: [{w:10,r:'15'},{w:12,r:'15'},{w:16,r:'15'},{w:20,r:'11'}] }
+    ]
+  },
+  {
+    id: -30, number: 30, date: '2025-12-14',
+    exercises: [
+      { name: 'L - Pull Ups', sets: [{w:0,r:'7'},{w:0,r:'6'},{w:0,r:'4'}] },
+      { name: 'Жим лежа', sets: [{w:50,r:'15'},{w:60,r:'15'},{w:70,r:'8'},{w:75,r:'5'}] },
+      { name: 'Dips', sets: [{w:0,r:'12'},{w:0,r:'14'},{w:0,r:'16'},{w:0,r:'12'}] },
+      { name: 'Face Pulls', sets: [{w:10,r:'15'},{w:12.5,r:'15'},{w:15,r:'15'},{w:17.5,r:'12'}] }
+    ]
+  },
+  {
     id: -3, number: 31, date: '2025-12-16',
     exercises: [
       { name: 'Pull Ups', sets: [{w:0,r:'12'},{w:0,r:'8'},{w:0,r:'7'}] },
@@ -488,6 +676,17 @@ const SEED_DATA = [
       { name: 'Delts Machine', sets: [{w:20,r:'15'},{w:25,r:'15'},{w:30,r:'10'},{w:30,r:'10'}] },
       { name: 'Abs Crunches', sets: [{w:12,r:'15'},{w:16,r:'15'},{w:20,r:'15'},{w:24,r:'8'}] },
       { name: 'Toes To Bar', sets: [{w:0,r:'20'},{w:0,r:'11'},{w:0,r:'10'}] }
+    ]
+  },
+  {
+    id: -34, number: 34, date: '2026-01-02',
+    exercises: [
+      { name: 'Incline DB Press', er: { initial: 12, reps: [30] }, sets: [{w:20,r:'ER12+30'}] },
+      { name: 'Butterfly 2 hands', sets: [{w:20,r:'15'},{w:20,r:'13'},{w:25,r:'6'},{w:20,r:'5'},{w:20,r:'10'}] },
+      { name: 'DB Curls', er: { initial: 12, reps: [5,4,3,3,2] }, sets: [{w:14,r:'ER12+5,4,3,3,2'}] },
+      { name: 'Abs Crunches', er: { initial: 12, reps: [6,5,4,3,2] }, sets: [{w:16,r:'ER12+6,5,4,3,2'}] },
+      { name: 'Chest Dips', sets: [{w:0,r:'15'},{w:0,r:'15'},{w:0,r:'10'}] },
+      { name: 'Hammers', er: { initial: 12, reps: [6,5,4,3,2] }, sets: [{w:14,r:'ER12+6,5,4,3,2'}] }
     ]
   },
   {
@@ -563,6 +762,7 @@ let addSetExIdx = -1;
 let repsStaging = '';
 let compoundMode = false;
 let dictSelected = new Set();
+let erState = null;
 
 function getHistory() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
@@ -644,28 +844,51 @@ function renderWorkout() {
   const history = getHistory();
   container.innerHTML = currentWorkout.exercises.map((ex, ei) => {
     const prev = findPrevExercise(ex.name, history);
-    const setsHTML = ex.sets.map((s, si) =>
-      `<div class="set-chip" onclick="deleteSet(${ei},${si})" title="Удалить">` +
-        (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') +
-        `<span class="sr">${s.r}</span></div>`
-    ).join('');
+    const isER = ex.er === true;
 
+    // Current sets as chips
+    const setsHTML = ex.sets.map((s, si) => {
+      const isERSet = typeof s.r === 'string' && s.r.startsWith('ER');
+      if (isERSet) {
+        return `<div class="set-chip current-chip er-chip" onclick="deleteSet(${ei},${si})" title="Удалить">` +
+          (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span> &times; ` : '') +
+          `<span class="er-fmt">${fmtERDisplay(s.r)}</span></div>`;
+      }
+      return `<div class="set-chip current-chip" onclick="deleteSet(${ei},${si})" title="Удалить">` +
+        (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') +
+        `<span class="sr">${s.r}</span></div>`;
+    }).join('');
+
+    // Previous sets as chips (same format, dimmer)
     let prevHTML = '';
     if (prev) {
-      const prevSets = prev.sets.map(s =>
-        s.w > 0 ? `${fmtW(s.w)}&times;${s.r}` : `${s.r}`
-      ).join('&ensp;');
-      prevHTML = `<div class="ex-prev"><div class="ex-prev-date">${fmtDateDisplay(prev.date)}</div>${prevSets}</div>`;
+      const prevSetsHTML = prev.sets.map(s => {
+        const isERSet = typeof s.r === 'string' && s.r.startsWith('ER');
+        if (isERSet) {
+          return `<div class="set-chip prev-chip er-chip">` +
+            (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span> &times; ` : '') +
+            `<span class="er-fmt">${fmtERDisplay(s.r)}</span></div>`;
+        }
+        return `<div class="set-chip prev-chip">` +
+          (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') +
+          `<span class="sr">${s.r}</span></div>`;
+      }).join('');
+      prevHTML = `<div class="ex-prev"><div class="ex-prev-date">${fmtDateDisplay(prev.date)}</div><div class="ex-sets-row">${prevSetsHTML}</div></div>`;
     }
+
+    const nameHTML = esc(ex.name) + (isER ? ' <span class="er-badge">ER</span>' : '');
+    const actionBtn = isER
+      ? `<button class="btn btn-ghost btn-block" onclick="openERMode(${ei})" style="font-size:14px;color:var(--orange)">${ex.sets.length > 0 ? 'Ещё ER' : 'Начать ER'}</button>`
+      : `<button class="btn btn-ghost btn-block" onclick="openAddSet(${ei})" style="font-size:14px">+ Подход</button>`;
 
     return `<div class="ex-card">
       <div class="ex-header">
-        <span class="ex-name">${esc(ex.name)}</span>
+        <span class="ex-name">${nameHTML}</span>
         <button class="del-btn" onclick="removeExercise(${ei})">&times;</button>
       </div>
       ${prevHTML}
       <div class="ex-sets-row">${setsHTML}</div>
-      <button class="btn btn-ghost btn-block" onclick="openAddSet(${ei})" style="font-size:14px">+ Подход</button>
+      ${actionBtn}
     </div>`;
   }).join('');
 }
@@ -719,13 +942,38 @@ async function exportWorkoutTextFromData(workout) {
 
   for (const ex of workout.exercises) {
     if (ex.sets.length === 0) continue;
-    const allBW = ex.sets.every(s => !s.w || s.w === 0);
-    if (allBW) {
-      text += `${ex.name}: ${ex.sets.map(s => s.r).join(', ')}\n`;
+
+    const erSets = ex.sets.filter(s => typeof s.r === 'string' && s.r.startsWith('ER'));
+    const normalSets = ex.sets.filter(s => !(typeof s.r === 'string' && s.r.startsWith('ER')));
+
+    if (erSets.length > 0) {
+      text += `${ex.name}:\n`;
+      for (const s of erSets) {
+        const p = parseER(s.r);
+        if (p) {
+          const repsStr = p.reps.join(',');
+          const total = p.reps.reduce((a, b) => a + b, 0);
+          text += s.w > 0 ? `${fmtW(s.w)}kg x ER${p.initial} + ${repsStr}` : `ER${p.initial} + ${repsStr}`;
+          if (p.reps.length > 1) text += ` (${total})`;
+          text += '\n';
+        }
+      }
+      if (normalSets.length > 0) {
+        const allBW = normalSets.every(s => !s.w || s.w === 0);
+        text += (allBW
+          ? normalSets.map(s => s.r).join(', ')
+          : normalSets.map(s => s.w > 0 ? `${fmtW(s.w)}kg x ${s.r}` : s.r).join(', ')
+        ) + '\n';
+      }
     } else {
-      text += `${ex.name}: ${ex.sets.map(s =>
-        s.w > 0 ? `${fmtW(s.w)}kg x ${s.r}` : `${s.r}`
-      ).join(', ')}\n`;
+      const allBW = ex.sets.every(s => !s.w || s.w === 0);
+      if (allBW) {
+        text += `${ex.name}: ${ex.sets.map(s => s.r).join(', ')}\n`;
+      } else {
+        text += `${ex.name}: ${ex.sets.map(s =>
+          s.w > 0 ? `${fmtW(s.w)}kg x ${s.r}` : `${s.r}`
+        ).join(', ')}\n`;
+      }
     }
   }
 
@@ -806,7 +1054,7 @@ function renderExercisePickerList(query) {
 
   const el = document.getElementById('exPickerList');
   el.innerHTML = list.map((n, i) =>
-    `<div class="ex-list-item" onclick="pickExercise(window._pickerList[${i}])">${esc(n)}</div>`
+    `<div class="ex-list-item" data-pick-idx="${i}">${esc(n)}<span class="swipe-hint">&rarr; ER</span></div>`
   ).join('');
 
   const exact = list.find(n => normalizeName(n) === normalizeName(query));
@@ -820,6 +1068,15 @@ function pickExercise(name) {
   renderWorkout();
 }
 
+function pickExerciseER(name) {
+  currentWorkout.exercises.push({ name, sets: [], er: true });
+  saveCurrent();
+  document.getElementById('modalPicker').classList.remove('open');
+  renderWorkout();
+  const idx = currentWorkout.exercises.length - 1;
+  setTimeout(() => openERMode(idx), 150);
+}
+
 function addCustomExercise() {
   const name = document.getElementById('exSearchInput').value.trim();
   if (!name) return;
@@ -829,6 +1086,54 @@ function addCustomExercise() {
 document.getElementById('modalPicker').addEventListener('click', function(e) {
   if (e.target === this) this.classList.remove('open');
 });
+
+// Swipe detection for ER mode in exercise picker
+(function() {
+  const el = document.getElementById('exPickerList');
+  let sx = 0, sy = 0, swiped = false, sItem = null;
+
+  el.addEventListener('touchstart', function(e) {
+    const item = e.target.closest('.ex-list-item');
+    if (!item) return;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+    sItem = item;
+    swiped = false;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', function(e) {
+    if (!sItem) return;
+    const dx = e.touches[0].clientX - sx;
+    const dy = Math.abs(e.touches[0].clientY - sy);
+    if (dx > 30 && dy < 40) sItem.classList.add('swiping');
+    else sItem.classList.remove('swiping');
+  }, { passive: true });
+
+  el.addEventListener('touchend', function(e) {
+    if (!sItem) return;
+    sItem.classList.remove('swiping');
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = Math.abs(e.changedTouches[0].clientY - sy);
+    if (dx > 60 && dy < 40) {
+      swiped = true;
+      const idx = parseInt(sItem.dataset.pickIdx);
+      if (!isNaN(idx) && window._pickerList[idx]) {
+        pickExerciseER(window._pickerList[idx]);
+      }
+    }
+    sItem = null;
+  });
+
+  el.addEventListener('click', function(e) {
+    if (swiped) { swiped = false; return; }
+    const item = e.target.closest('.ex-list-item');
+    if (!item) return;
+    const idx = parseInt(item.dataset.pickIdx);
+    if (!isNaN(idx) && window._pickerList[idx]) {
+      pickExercise(window._pickerList[idx]);
+    }
+  });
+})();
 
 // ═══════════════════════════════════
 //  ADD SET SCREEN
@@ -1008,6 +1313,205 @@ function renderStaging() {
 }
 
 // ═══════════════════════════════════
+//  ER MODE
+// ═══════════════════════════════════
+function parseER(r) {
+  const m = r.match(/^ER(\d+)\+(.+)$/);
+  if (!m) return null;
+  return { initial: parseInt(m[1]), reps: m[2].split(',').map(Number) };
+}
+
+function fmtERDisplay(r) {
+  const p = parseER(r);
+  if (!p) return r;
+  return `ER${p.initial}+${p.reps.join(',')}`;
+}
+
+function openERMode(exIdx) {
+  const ex = currentWorkout.exercises[exIdx];
+  let defaultW = 0;
+  const prev = findPrevExercise(ex.name, getHistory());
+  if (prev && prev.sets.length > 0) {
+    const erSet = prev.sets.find(s => typeof s.r === 'string' && s.r.startsWith('ER'));
+    if (erSet) defaultW = erSet.w;
+    else defaultW = prev.sets[0].w;
+  }
+
+  erState = {
+    exIdx, weight: defaultW, initial: 12, target: 20,
+    phase: 'weight', cumReps: [],
+    stopwatchStart: null, stopwatchInterval: null
+  };
+
+  document.getElementById('erExName').textContent = ex.name;
+  renderERPhase();
+  document.getElementById('erScreen').classList.add('open');
+}
+
+function closeER() {
+  if (erState && erState.stopwatchInterval) clearInterval(erState.stopwatchInterval);
+  erState = null;
+  document.getElementById('erScreen').classList.remove('open');
+  renderWorkout();
+}
+
+function renderERPhase() {
+  const body = document.getElementById('erBody');
+
+  if (erState.phase === 'weight') {
+    body.innerHTML = `
+      <div class="weight-section" style="flex:1">
+        <div class="weight-adjust-row">
+          <button class="weight-adj dec" onclick="erAdjW(-10)">-10</button>
+          <button class="weight-adj dec" onclick="erAdjW(-5)">-5</button>
+          <button class="weight-adj dec" onclick="erAdjW(-2.5)">-2.5</button>
+          <button class="weight-adj dec" onclick="erAdjW(-2)">-2</button>
+        </div>
+        <input type="number" inputmode="decimal" class="weight-input" id="erWeightInput"
+          value="${erState.weight}" step="0.5" min="0">
+        <div class="weight-label">кг</div>
+        <div class="weight-adjust-row">
+          <button class="weight-adj inc" onclick="erAdjW(2)">+2</button>
+          <button class="weight-adj inc" onclick="erAdjW(2.5)">+2.5</button>
+          <button class="weight-adj inc" onclick="erAdjW(5)">+5</button>
+          <button class="weight-adj inc" onclick="erAdjW(10)">+10</button>
+        </div>
+      </div>
+      <div style="padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))">
+        <button class="btn btn-primary btn-block" onclick="erGoInitial()" style="font-size:17px">Начать ER</button>
+      </div>`;
+  } else if (erState.phase === 'initial') {
+    body.innerHTML = `
+      <div class="er-initial-section">
+        <div style="font-size:14px;color:var(--text2);margin-bottom:8px">${fmtW(erState.weight)} кг</div>
+        <div class="er-initial-num">${erState.initial}</div>
+        <div class="er-initial-label">повторений</div>
+        <div class="er-initial-adj">
+          <button class="weight-adj dec" onclick="erAdjInitial(-1)" style="width:56px;height:56px;font-size:18px">-1</button>
+          <button class="weight-adj inc" onclick="erAdjInitial(1)" style="width:56px;height:56px;font-size:18px">+1</button>
+        </div>
+      </div>
+      <div style="padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))">
+        <button class="btn btn-green btn-block" onclick="erConfirmInitial()" style="font-size:17px">&#10003; Сделано</button>
+      </div>`;
+  } else if (erState.phase === 'cumulative') {
+    const total = erState.cumReps.reduce((a, b) => a + b, 0);
+    const remaining = Math.max(0, erState.target - total);
+    const pct = Math.min(100, (total / erState.target) * 100);
+    const logStr = erState.cumReps.length > 0 ? erState.cumReps.join(', ') : '';
+
+    body.innerHTML = `
+      <div class="er-top-bar">
+        <div class="er-stopwatch-wrap">
+          <div class="er-stopwatch" id="erStopwatch">0:00</div>
+          <button class="er-restart-btn" onclick="erRestartSW()">&#8635;</button>
+        </div>
+        <div class="er-set-counter">#${erState.cumReps.length + 1}</div>
+      </div>
+      <div class="er-remaining-section">
+        <div class="er-remaining-num">${remaining}</div>
+        <div class="er-remaining-label">осталось из ${erState.target}</div>
+        <div class="er-progress-bar"><div class="er-progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="er-log">${logStr ? '<b>' + logStr + '</b>' : ''}</div>
+      <div class="er-reps-grid">
+        ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n =>
+          `<button class="rep-btn" onclick="erAddReps(${n})">${n}</button>`
+        ).join('')}
+      </div>
+      <div class="er-finish-bar">
+        <button class="btn btn-green btn-block" onclick="erFinish()">Завершить ER</button>
+      </div>`;
+    erStartSW();
+  }
+}
+
+function erAdjW(delta) {
+  const inp = document.getElementById('erWeightInput');
+  let val = parseFloat(inp.value) || 0;
+  val = Math.max(0, Math.round((val + delta) * 10) / 10);
+  inp.value = val;
+  erState.weight = val;
+}
+
+function erGoInitial() {
+  erState.weight = parseFloat(document.getElementById('erWeightInput').value) || 0;
+  erState.phase = 'initial';
+  renderERPhase();
+}
+
+function erAdjInitial(delta) {
+  erState.initial = Math.max(1, erState.initial + delta);
+  document.querySelector('.er-initial-num').textContent = erState.initial;
+}
+
+function erConfirmInitial() {
+  erState.phase = 'cumulative';
+  erState.stopwatchStart = Date.now();
+  renderERPhase();
+}
+
+function erStartSW() {
+  if (erState.stopwatchInterval) clearInterval(erState.stopwatchInterval);
+  if (!erState.stopwatchStart) erState.stopwatchStart = Date.now();
+  erState.stopwatchInterval = setInterval(() => {
+    const el = document.getElementById('erStopwatch');
+    if (!el) { clearInterval(erState.stopwatchInterval); return; }
+    const elapsed = Math.floor((Date.now() - erState.stopwatchStart) / 1000);
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    el.textContent = mins + ':' + String(secs).padStart(2, '0');
+  }, 200);
+}
+
+function erRestartSW() {
+  erState.stopwatchStart = Date.now();
+}
+
+function erAddReps(n) {
+  erState.cumReps.push(n);
+  if ('vibrate' in navigator) navigator.vibrate(10);
+
+  const total = erState.cumReps.reduce((a, b) => a + b, 0);
+  const remaining = Math.max(0, erState.target - total);
+  const pct = Math.min(100, (total / erState.target) * 100);
+
+  const remNum = document.querySelector('.er-remaining-num');
+  if (remNum) remNum.textContent = remaining;
+  const fill = document.querySelector('.er-progress-fill');
+  if (fill) fill.style.width = pct + '%';
+  const log = document.querySelector('.er-log');
+  if (log) log.innerHTML = '<b>' + erState.cumReps.join(', ') + '</b>';
+  const counter = document.querySelector('.er-set-counter');
+  if (counter) counter.textContent = '#' + (erState.cumReps.length + 1);
+
+  erRestartSW();
+
+  if (remaining <= 0) {
+    showToast('ER завершён!');
+    setTimeout(() => erFinish(), 500);
+  }
+}
+
+function erFinish() {
+  if (!erState) return;
+  if (erState.stopwatchInterval) clearInterval(erState.stopwatchInterval);
+
+  const ex = currentWorkout.exercises[erState.exIdx];
+  if (erState.cumReps.length > 0) {
+    const repsStr = erState.cumReps.join(',');
+    ex.sets.push({ w: erState.weight, r: `ER${erState.initial}+${repsStr}` });
+  } else if (erState.phase === 'cumulative') {
+    ex.sets.push({ w: erState.weight, r: `ER${erState.initial}+0` });
+  }
+  saveCurrent();
+
+  const total = erState.cumReps.reduce((a, b) => a + b, 0);
+  showToast(`ER: ${erState.initial} + ${total}`);
+  closeER();
+}
+
+// ═══════════════════════════════════
 //  HISTORY
 // ═══════════════════════════════════
 function renderFullHistory() {
@@ -1020,9 +1524,13 @@ function renderFullHistory() {
 function historyCardHTML(w, idPrefix, showActions) {
   const exNames = w.exercises.map(e => e.name).join(', ');
   let detailHTML = w.exercises.map(ex => {
-    const setsStr = ex.sets.map(s =>
-      s.w > 0 ? `${fmtW(s.w)}&times;${s.r}` : `${s.r}`
-    ).join('&ensp;');
+    const setsStr = ex.sets.map(s => {
+      const isERSet = typeof s.r === 'string' && s.r.startsWith('ER');
+      if (isERSet) {
+        return (s.w > 0 ? `${fmtW(s.w)}&times;` : '') + fmtERDisplay(s.r);
+      }
+      return s.w > 0 ? `${fmtW(s.w)}&times;${s.r}` : `${s.r}`;
+    }).join('&ensp;');
     return `<div class="hist-ex-name">${esc(ex.name)}</div><div class="hist-ex-sets">${setsStr}</div>`;
   }).join('');
 
@@ -1235,7 +1743,7 @@ function findPrevExercise(name, history) {
   for (let i = history.length - 1; i >= 0; i--) {
     const w = history[i];
     const ex = w.exercises.find(e => normalizeName(e.name) === normalized);
-    if (ex) return { date: w.date, sets: ex.sets };
+    if (ex) return { date: w.date, sets: ex.sets, er: ex.er };
   }
   return null;
 }
