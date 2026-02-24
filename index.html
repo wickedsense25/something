@@ -384,15 +384,6 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 .er-initial-num { font-size: 80px; font-weight: 700; color: var(--primary); }
 .er-initial-label { font-size: 16px; color: var(--text2); margin-top: 4px; }
 .er-initial-adj { display: flex; gap: 12px; margin-top: 24px; }
-.swipe-hint {
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  font-size: 11px; color: var(--orange); opacity: 0;
-  transition: opacity .2s; pointer-events: none;
-}
-.ex-list-item { position: relative; overflow: hidden; }
-.ex-list-item.swiping .swipe-hint { opacity: 1; }
-.ex-list-item.swiping { background: rgba(255,152,0,0.08); }
-
 @media (min-width: 500px) {
   .page, .addset-body { max-width: 500px; margin-left: auto; margin-right: auto; }
 }
@@ -427,7 +418,10 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 
   <div id="exerciseList"></div>
 
-  <button class="btn btn-ghost btn-block" onclick="openExercisePicker()" style="margin-bottom:12px">+ Упражнение</button>
+  <div style="display:flex; gap:8px; margin-bottom:12px">
+    <button class="btn btn-ghost" style="flex:1" onclick="openExercisePicker()">+ Упражнение</button>
+    <button class="btn btn-ghost" style="flex-shrink:0; color:var(--orange); border:1px solid var(--orange-dim)" onclick="openExercisePicker(true)">+ ER</button>
+  </div>
 
   <button class="btn btn-ghost btn-block" onclick="exportWorkoutText()" style="margin-bottom:12px" id="btnExport">
     Скопировать текст
@@ -1027,10 +1021,15 @@ document.getElementById('textModal').addEventListener('click', function(e) {
 // ═══════════════════════════════════
 //  EXERCISE PICKER
 // ═══════════════════════════════════
-function openExercisePicker() {
+let _pickerERMode = false;
+
+function openExercisePicker(erMode) {
   if (!currentWorkout) return;
+  _pickerERMode = !!erMode;
   document.getElementById('exSearchInput').value = '';
   renderExercisePickerList('');
+  document.getElementById('modalPicker').querySelector('h2').textContent =
+    _pickerERMode ? 'Выбери упражнение (ER)' : 'Выбери упражнение';
   document.getElementById('modalPicker').classList.add('open');
   setTimeout(() => document.getElementById('exSearchInput').focus(), 100);
 }
@@ -1054,11 +1053,18 @@ function renderExercisePickerList(query) {
 
   const el = document.getElementById('exPickerList');
   el.innerHTML = list.map((n, i) =>
-    `<div class="ex-list-item" data-pick-idx="${i}">${esc(n)}<span class="swipe-hint">&rarr; ER</span></div>`
+    `<div class="ex-list-item" onclick="pickFromList(${i})">${esc(n)}</div>`
   ).join('');
 
   const exact = list.find(n => normalizeName(n) === normalizeName(query));
   document.getElementById('btnAddCustom').style.display = (q && !exact) ? 'block' : 'none';
+}
+
+function pickFromList(idx) {
+  const name = window._pickerList[idx];
+  if (!name) return;
+  if (_pickerERMode) pickExerciseER(name);
+  else pickExercise(name);
 }
 
 function pickExercise(name) {
@@ -1080,60 +1086,13 @@ function pickExerciseER(name) {
 function addCustomExercise() {
   const name = document.getElementById('exSearchInput').value.trim();
   if (!name) return;
-  pickExercise(name);
+  if (_pickerERMode) pickExerciseER(name);
+  else pickExercise(name);
 }
 
 document.getElementById('modalPicker').addEventListener('click', function(e) {
   if (e.target === this) this.classList.remove('open');
 });
-
-// Swipe detection for ER mode in exercise picker
-(function() {
-  const el = document.getElementById('exPickerList');
-  let sx = 0, sy = 0, swiped = false, sItem = null;
-
-  el.addEventListener('touchstart', function(e) {
-    const item = e.target.closest('.ex-list-item');
-    if (!item) return;
-    sx = e.touches[0].clientX;
-    sy = e.touches[0].clientY;
-    sItem = item;
-    swiped = false;
-  }, { passive: true });
-
-  el.addEventListener('touchmove', function(e) {
-    if (!sItem) return;
-    const dx = e.touches[0].clientX - sx;
-    const dy = Math.abs(e.touches[0].clientY - sy);
-    if (dx > 30 && dy < 40) sItem.classList.add('swiping');
-    else sItem.classList.remove('swiping');
-  }, { passive: true });
-
-  el.addEventListener('touchend', function(e) {
-    if (!sItem) return;
-    sItem.classList.remove('swiping');
-    const dx = e.changedTouches[0].clientX - sx;
-    const dy = Math.abs(e.changedTouches[0].clientY - sy);
-    if (dx > 60 && dy < 40) {
-      swiped = true;
-      const idx = parseInt(sItem.dataset.pickIdx);
-      if (!isNaN(idx) && window._pickerList[idx]) {
-        pickExerciseER(window._pickerList[idx]);
-      }
-    }
-    sItem = null;
-  });
-
-  el.addEventListener('click', function(e) {
-    if (swiped) { swiped = false; return; }
-    const item = e.target.closest('.ex-list-item');
-    if (!item) return;
-    const idx = parseInt(item.dataset.pickIdx);
-    if (!isNaN(idx) && window._pickerList[idx]) {
-      pickExercise(window._pickerList[idx]);
-    }
-  });
-})();
 
 // ═══════════════════════════════════
 //  ADD SET SCREEN
