@@ -362,8 +362,8 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   transition: width .3s;
 }
 .er-log {
-  padding: 0 16px 8px; font-size: 14px; color: var(--text2);
-  text-align: center; flex-shrink: 0; min-height: 22px;
+  font-size: 14px; color: var(--text2);
+  text-align: center; min-height: 20px;
 }
 .er-log b { color: var(--green); }
 .er-reps-grid {
@@ -550,6 +550,116 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 //  SEED DATA
 // ═══════════════════════════════════
 const SEED_DATA = [
+  {
+    id: -10, number: 10, date: '2025-10-22',
+    exercises: [
+      { name: 'Подтягивания узким хватом', sets: [{w:0,r:'13'},{w:0,r:'9'},{w:0,r:'7'}] },
+      { name: 'Жим на плечи, блочный тренажер', sets: [{w:40,r:'16'},{w:45,r:'15'},{w:50,r:'12'},{w:50,r:'11'}] },
+      { name: 'Брусья на трицепс', sets: [{w:0,r:'14'},{w:0,r:'12'},{w:0,r:'9'}] },
+      { name: 'Гоблет приседания с гирей', sets: [{w:12,r:'15'},{w:16,r:'15'},{w:16,r:'15'},{w:12,r:'14'}] },
+      { name: 'Toes to Bar', sets: [{w:0,r:'14'},{w:0,r:'9'},{w:0,r:'8'}] }
+    ]
+  },
+  {
+    id: -11, number: 11, date: '2025-10-26',
+    exercises: [
+      { name: 'Присед', sets: [{w:20,r:'15'},{w:30,r:'15'},{w:35,r:'15'}] },
+      { name: 'Жим лежа', sets: [{w:60,r:'16'},{w:65,r:'11'},{w:70,r:'9'},{w:70,r:'6'}] },
+      { name: 'Подтягивания обратным хватом', sets: [{w:0,r:'9'}] },
+      { name: 'Pulley', sets: [{w:20,r:'15'},{w:25,r:'15'},{w:25,r:'15'}] },
+      { name: 'Гиперэкстензия', sets: [{w:0,r:'15'},{w:0,r:'12'},{w:0,r:'10'}] }
+    ]
+  },
+  {
+    id: -12, number: 12, date: '2025-10-28',
+    exercises: [
+      { name: 'Жим лежа под наклоном', sets: [{w:40,r:'15'},{w:45,r:'15'},{w:50,r:'11'}] },
+      { name: 'Подтягивания широким хватом', sets: [{w:0,r:'8'}] },
+      { name: 'Жим штанги на бицепс', sets: [{w:20,r:'15'},{w:25,r:'15'},{w:30,r:'8'}] },
+      { name: 'Тяга троса на трицепс', sets: [{w:15,r:'15'},{w:15,r:'12'},{w:15,r:'9'}] },
+      { name: 'Face Pulls', sets: [{w:10,r:'15'},{w:12.5,r:'15'},{w:12.5,r:'13'}] },
+      { name: 'Жим платформы ногами', sets: [{w:20,r:'15'},{w:40,r:'15'},{w:60,r:'15'}] },
+      { name: 'Махи гантелями в стороны', sets: [{w:8,r:'15'},{w:9,r:'15'}] }
+    ]
+  },
+  {
+    id: -13, number: 13, date: '2025-11-13',
+    exercises: [
+      { name: 'Yellow Wide Chest Press', sets: [{w:40,r:'15'},{w:50,r:'15'},{w:60,r:'14'},{w:70,r:'9'}] },
+      { name: 'Подтягивания обратным хватом', sets: [{w:0,r:'10'},{w:0,r:'7'},{w:0,r:'5'}] },
+      { name: 'Тяга троса на трицепс', sets: [{w:15,r:'15'},{w:17.5,r:'10'},{w:17.5,r:'8'}] },
+      { name: 'Face Pulls', sets: [{w:10,r:'15'},{w:10,r:'15'},{w:10,r:'15'}] },
+      { name: 'Toes To Bar', sets: [{w:0,r:'15s+5'},{w:0,r:'15s+5'},{w:0,r:'12s+3'}] }
+    ]
+  },
+  {
+    id: -14, number: 14, date: '2025-11-16',
+    exercises: [
+      { name: 'Жим лежа под наклоном', sets: [{w:40,r:'15'},{w:50,r:'12'}] },
+      { name: 'Вертикальная тяга', sets: [{w:30,r:'15'},{w:40,r:'15'},{w:50,r:'10'}] },
+      { name: 'Yellow Chest Press', sets: [{w:50,r:'15'},{w:55,r:'15'},{w:60,r:'9'}] },
+      { name: 'Гоблет приседания', sets: [{w:0,r:'20'},{w:12,r:'15'},{w:16,r:'15'},{w:20,r:'15'}] },
+      { name: 'Скручивания на пресс', sets: [{w:0,r:'15'},{w:5,r:'15'},{w:10,r:'15'}] }
+    ]
+  },
+  {
+    id: -15, number: 15, date: '2025-11-19',
+    exercises: [
+      { name: 'Жим лежа', sets: [{w:50,r:'15'},{w:60,r:'15'},{w:70,r:'8'},{w:80,r:'3'}] },
+      { name: 'L-Pull Ups II', sets: [{w:0,r:'6'},{w:0,r:'6'},{w:0,r:'6'}] },
+      { name: 'Yellow Shoulder Press', sets: [{w:40,r:'15'},{w:50,r:'15'},{w:55,r:'9'},{w:55,r:'10'}] },
+      { name: 'Тяга штанги к поясу', sets: [{w:35,r:'15'},{w:40,r:'15'},{w:50,r:'10'},{w:50,r:'10'}] }
+    ]
+  },
+  {
+    id: -16, number: 16, date: '2025-11-20',
+    exercises: [
+      { name: 'Жим лежа под наклоном', sets: [{w:45,r:'15'},{w:50,r:'12'},{w:55,r:'8'}] },
+      { name: 'Chin Ups', sets: [{w:0,r:'10'},{w:0,r:'8'},{w:0,r:'6'}] },
+      { name: 'Pulley', sets: [{w:25,r:'15'},{w:30,r:'12'},{w:30,r:'10'}] },
+      { name: 'Dumbbell Curls', sets: [{w:14,r:'10'},{w:12,r:'12'},{w:12,r:'10'}] },
+      { name: 'Squats', sets: [{w:20,r:'15'},{w:30,r:'15'},{w:35,r:'15'}] }
+    ]
+  },
+  {
+    id: -17, number: 17, date: '2025-11-25',
+    exercises: [
+      { name: 'Жим лежа под наклоном', sets: [{w:40,r:'15'},{w:50,r:'15'},{w:60,r:'8'}] },
+      { name: 'L-Pull Ups II', sets: [{w:0,r:'8'},{w:0,r:'6'},{w:0,r:'5'}] },
+      { name: 'Гоблет-приседания', sets: [{w:20,r:'15'},{w:20,r:'15'},{w:20,r:'15'}] },
+      { name: 'Dumbbell Curls', sets: [{w:12,r:'15'},{w:12,r:'12'},{w:12,r:'10'},{w:12,r:'9'}] },
+      { name: 'Abs Crunches', sets: [{w:0,r:'15'},{w:5,r:'15'},{w:7.5,r:'15'},{w:10,r:'15'}] }
+    ]
+  },
+  {
+    id: -18, number: 18, date: '2025-11-26',
+    exercises: [
+      { name: 'Yellow Incline Chest Press', sets: [{w:50,r:'15'},{w:55,r:'12'},{w:55,r:'12'},{w:55,r:'9'}] },
+      { name: 'Triceps Dips', sets: [{w:0,r:'12'},{w:0,r:'10'},{w:0,r:'10'},{w:0,r:'10'}] },
+      { name: 'Delts Machine', sets: [{w:20,r:'15'},{w:20,r:'15'},{w:25,r:'10'},{w:25,r:'7'}] },
+      { name: 'Трицепс в блоке прямой (чуть изогнутой V) рукоятью', sets: [{w:15,r:'15'},{w:17.5,r:'15'},{w:20,r:'15'},{w:22.5,r:'9'}] },
+      { name: 'Toes to Bar', sets: [{w:0,r:'12'},{w:0,r:'10'},{w:0,r:'8'},{w:0,r:'6'}] }
+    ]
+  },
+  {
+    id: -19, number: 19, date: '2025-11-27',
+    exercises: [
+      { name: 'Chin Ups', sets: [{w:0,r:'12'},{w:0,r:'8'},{w:0,r:'6'}] },
+      { name: 'Pulley', sets: [{w:20,r:'15'},{w:25,r:'15'},{w:30,r:'15'},{w:35,r:'8'}] },
+      { name: 'Butterfly 1 wing', sets: [{w:15,r:'15'},{w:20,r:'15'},{w:22.5,r:'15'},{w:25,r:'10'}] },
+      { name: 'Reverse Fly', sets: [{w:10,r:'15'},{w:12.5,r:'9'},{w:10,r:'10'},{w:7.5,r:'10'}] }
+    ]
+  },
+  {
+    id: -20, number: 20, date: '2025-11-30',
+    exercises: [
+      { name: 'Kettlebell Squats', sets: [{w:12,r:'15'},{w:16,r:'20'},{w:20,r:'15'},{w:24,r:'12'}] },
+      { name: 'Yellow Incline Chest Press', sets: [{w:40,r:'15'},{w:50,r:'15'},{w:60,r:'11'},{w:60,r:'9'}] },
+      { name: 'Black Chest Press', sets: [{w:40,r:'15'},{w:50,r:'10'},{w:60,r:'6'}] },
+      { name: 'DB Curls', sets: [{w:14,r:'15'},{w:14,r:'12'},{w:14,r:'8'}] },
+      { name: 'L-Pull Ups II', sets: [{w:0,r:'8'},{w:0,r:'5'},{w:0,r:'5'}] }
+    ]
+  },
   {
     id: -21, number: 21, date: '2025-12-02',
     exercises: [
@@ -1389,7 +1499,10 @@ function renderERPhase() {
         <div class="er-remaining-label">осталось из ${erState.target}</div>
         <div class="er-progress-bar"><div class="er-progress-fill" style="width:${pct}%"></div></div>
       </div>
-      <div class="er-log">${logStr ? '<b>' + logStr + '</b>' : ''}</div>
+      <div style="display:flex;align-items:center;gap:8px;padding:0 16px 8px;min-height:30px">
+        <div class="er-log" style="flex:1;padding:0">${logStr ? '<b>' + logStr + '</b>' : ''}</div>
+        <button onclick="erDeleteLastRep()" style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:2px 6px;opacity:0.6;flex-shrink:0">&times;</button>
+      </div>
       <div class="er-reps-grid">
         ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n =>
           `<button class="rep-btn" onclick="erAddReps(${n})">${n}</button>`
@@ -1447,26 +1560,35 @@ function erRestartSW() {
 function erAddReps(n) {
   erState.cumReps.push(n);
   if ('vibrate' in navigator) navigator.vibrate(10);
+  erUpdateCumUI();
+  erRestartSW();
+}
 
+function erDeleteLastRep() {
+  if (erState.cumReps.length === 0) return;
+  erState.cumReps.pop();
+  erUpdateCumUI();
+}
+
+function erUpdateCumUI() {
   const total = erState.cumReps.reduce((a, b) => a + b, 0);
   const remaining = Math.max(0, erState.target - total);
   const pct = Math.min(100, (total / erState.target) * 100);
 
   const remNum = document.querySelector('.er-remaining-num');
   if (remNum) remNum.textContent = remaining;
+  const remLabel = document.querySelector('.er-remaining-label');
+  if (remLabel) remLabel.textContent = remaining <= 0
+    ? `набрано ${total} из ${erState.target}`
+    : `осталось из ${erState.target}`;
   const fill = document.querySelector('.er-progress-fill');
   if (fill) fill.style.width = pct + '%';
   const log = document.querySelector('.er-log');
-  if (log) log.innerHTML = '<b>' + erState.cumReps.join(', ') + '</b>';
+  if (log) log.innerHTML = erState.cumReps.length > 0
+    ? '<b>' + erState.cumReps.join(', ') + '</b>'
+    : '';
   const counter = document.querySelector('.er-set-counter');
   if (counter) counter.textContent = '#' + (erState.cumReps.length + 1);
-
-  erRestartSW();
-
-  if (remaining <= 0) {
-    showToast('ER завершён!');
-    setTimeout(() => erFinish(), 500);
-  }
 }
 
 function erFinish() {
