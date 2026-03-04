@@ -104,9 +104,13 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 .ex-list-item {
   padding: 12px; border-radius: 8px; cursor: pointer;
   font-size: 15px; transition: background .15s;
+  display: flex; align-items: center; gap: 10px;
 }
 .ex-list-item:active { background: var(--surface2); }
 .ex-list-item + .ex-list-item { border-top: 1px solid var(--surface2); }
+.ex-list-item .ex-group-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
 .search-input {
   background: var(--surface2); border: 1px solid transparent;
   border-radius: 8px; color: var(--text); font-size: 15px;
@@ -114,6 +118,38 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 }
 .search-input:focus { border-color: var(--primary); }
 .search-input::placeholder { color: var(--text2); }
+.search-wrap {
+  position: relative;
+}
+.search-wrap .search-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; color: var(--text2); pointer-events: none;
+}
+.search-wrap .search-input {
+  padding-left: 34px; margin-bottom: 0;
+}
+
+/* Exercise group chips */
+.group-row {
+  display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 4px;
+  -webkit-overflow-scrolling: touch; flex-shrink: 0;
+  scrollbar-width: none;
+}
+.group-row::-webkit-scrollbar { display: none; }
+.group-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 6px; border-radius: 12px; cursor: pointer;
+  min-width: 56px; flex-shrink: 0;
+  background: transparent; border: 1.5px solid var(--surface3);
+  transition: all .15s; color: var(--text2);
+}
+.group-chip.active {
+  border-color: var(--primary); background: rgba(79,195,247,.1);
+  color: var(--primary);
+}
+.group-chip:active { transform: scale(.95); }
+.group-chip svg { width: 22px; height: 22px; }
+.group-chip span { font-size: 10px; font-weight: 600; white-space: nowrap; }
 
 /* Add Set fullscreen */
 .addset-screen {
@@ -447,7 +483,11 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
     <span></span>
   </div>
   <div style="padding:8px 16px 0; flex-shrink:0;">
-    <input class="search-input" id="exSearchInput" placeholder="Поиск или новое название..." oninput="filterExercises()" style="margin-bottom:0">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      <input class="search-input" id="exSearchInput" placeholder="Поиск или новое название..." oninput="filterExercises()">
+    </div>
+    <div class="group-row" id="groupRow"></div>
   </div>
   <div id="exPickerList" style="flex:1; overflow-y:auto; padding:8px 16px;"></div>
   <div style="padding:8px 16px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); flex-shrink:0;">
@@ -861,6 +901,32 @@ const SEED_DATA = [
 
 const STORAGE_KEY = 'wt_history';
 const CURRENT_KEY = 'wt_current';
+const EXERCISES_KEY = 'wt_exercises';
+
+// ═══════════════════════════════════
+//  EXERCISE GROUPS
+// ═══════════════════════════════════
+const EX_GROUPS = [
+  { id: 'all', name: 'Все', color: '#9e9e9e',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="6" r="1.5"/><circle cx="12" cy="6" r="1.5"/><circle cx="19" cy="6" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="18" r="1.5"/><circle cx="12" cy="18" r="1.5"/><circle cx="19" cy="18" r="1.5"/></svg>' },
+  { id: 'chest', name: 'Грудь', color: '#ef5350',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9c0-2.5 3.5-4 8-4s8 1.5 8 4c0 3.5-3 6.5-4.5 7.5-.7.5-2.3.5-3 0C11 15.5 4 12.5 4 9z"/><line x1="12" y1="5" x2="12" y2="17"/></svg>' },
+  { id: 'back', name: 'Спина', color: '#42a5f5',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v16"/><path d="M8 7c-2 1-3 3-3 5s1 4 3 5"/><path d="M16 7c2 1 3 3 3 5s-1 4-3 5"/><path d="M9 10h6"/><path d="M9 14h6"/></svg>' },
+  { id: 'shoulders', name: 'Плечи', color: '#ab47bc',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="6" r="2.5"/><path d="M4 16c0-4 3.5-7 8-7s8 3 8 7"/></svg>' },
+  { id: 'biceps', name: 'Бицепс', color: '#ff9800',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 20l1-5c.3-1.5 1-3 2-4l3-3c1-1 1.5-2 1.5-3V4"/><path d="M14.5 4c1 0 2 1 2 2.5 0 2-1.5 3.5-3 5-1 1-1.7 2.5-2 4L10 20"/><path d="M11 8c1-.5 3-.5 4.5 1"/></svg>' },
+  { id: 'triceps', name: 'Трицепс', color: '#26a69a',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 4v7c0 1.5-.5 3-2 4l-2 2"/><path d="M9 4c1.5 0 3 1 3 3v4c0 1.5.5 3 2 4l2 2"/><path d="M9 11h3"/></svg>' },
+  { id: 'legs', name: 'Ноги', color: '#66bb6a',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 3v5c0 2-1 3-1.5 5S7 16 7 18v3"/><path d="M15 3v5c0 2 1 3 1.5 5s.5 3 .5 5v3"/><path d="M7 21h3"/><path d="M14 21h3"/></svg>' },
+  { id: 'abs', name: 'Пресс', color: '#ffa726',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="18" x2="17" y2="18"/></svg>' },
+];
+
+function getGroupById(id) { return EX_GROUPS.find(g => g.id === id); }
+function getGroupColor(id) { const g = getGroupById(id); return g ? g.color : '#9e9e9e'; }
 
 // ═══════════════════════════════════
 //  STATE
@@ -871,6 +937,51 @@ let repsStaging = '';
 let compoundMode = false;
 let dictSelected = new Set();
 let erState = null;
+let _pickerGroup = 'all';
+
+// ── Exercise dictionary (synced to Google Sheet) ──
+function getExercises() {
+  try { return JSON.parse(localStorage.getItem(EXERCISES_KEY)) || []; } catch { return []; }
+}
+function saveExercisesLocal(list) {
+  localStorage.setItem(EXERCISES_KEY, JSON.stringify(list));
+}
+function getExerciseGroup(name) {
+  const ex = getExercises().find(e => normalizeName(e.name) === normalizeName(name));
+  return ex ? ex.group : '';
+}
+function setExerciseGroup(name, group) {
+  const list = getExercises();
+  const norm = normalizeName(name);
+  const existing = list.find(e => normalizeName(e.name) === norm);
+  if (existing) { existing.group = group; } else { list.push({ name, group }); }
+  saveExercisesLocal(list);
+  syncExercisesToCloud();
+}
+function ensureExerciseExists(name) {
+  const list = getExercises();
+  const norm = normalizeName(name);
+  if (!list.find(e => normalizeName(e.name) === norm)) {
+    list.push({ name, group: '' });
+    saveExercisesLocal(list);
+  }
+}
+function buildExerciseListFromHistory() {
+  const history = getHistory();
+  const list = getExercises();
+  const existingNorms = new Set(list.map(e => normalizeName(e.name)));
+  let added = false;
+  history.forEach(w => w.exercises.forEach(e => {
+    const norm = normalizeName(e.name);
+    if (!existingNorms.has(norm)) {
+      existingNorms.add(norm);
+      list.push({ name: e.name, group: '' });
+      added = true;
+    }
+  }));
+  if (added) saveExercisesLocal(list);
+  return list;
+}
 
 function getHistory() {
   try {
@@ -1157,7 +1268,9 @@ let _pickerERMode = false;
 function openExercisePicker(erMode) {
   if (!currentWorkout) return;
   _pickerERMode = !!erMode;
+  _pickerGroup = 'all';
   document.getElementById('exSearchInput').value = '';
+  renderGroupRow();
   renderExercisePickerList('');
   document.getElementById('pickerTitle').textContent =
     _pickerERMode ? 'Упражнение (ER)' : 'Выбери упражнение';
@@ -1169,40 +1282,60 @@ function closePicker() {
   document.getElementById('modalPicker').classList.remove('open');
 }
 
+function renderGroupRow() {
+  document.getElementById('groupRow').innerHTML = EX_GROUPS.map(g =>
+    `<div class="group-chip${_pickerGroup === g.id ? ' active' : ''}" onclick="selectGroup('${g.id}')">
+      ${g.icon}<span>${g.name}</span>
+    </div>`
+  ).join('');
+}
+
+function selectGroup(id) {
+  _pickerGroup = id;
+  renderGroupRow();
+  filterExercises();
+}
+
 function filterExercises() {
   renderExercisePickerList(document.getElementById('exSearchInput').value);
 }
 
 function renderExercisePickerList(query) {
-  const history = getHistory();
-  const namesMap = new Map();
-  history.forEach(w => w.exercises.forEach(e => {
-    const norm = normalizeName(e.name);
-    if (!namesMap.has(norm)) namesMap.set(norm, e.name);
-  }));
-  let list = [...namesMap.values()].sort((a, b) => a.localeCompare(b, 'ru'));
-  const q = query.trim().toLowerCase();
-  if (q) list = list.filter(n => n.toLowerCase().includes(q));
+  const exercises = buildExerciseListFromHistory();
+  let list = exercises.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+
+  // Filter by group
+  if (_pickerGroup !== 'all') {
+    list = list.filter(e => e.group === _pickerGroup);
+  }
+
+  // Filter by search
+  const q = (query || '').trim().toLowerCase();
+  if (q) list = list.filter(e => e.name.toLowerCase().includes(q));
 
   window._pickerList = list;
 
   const el = document.getElementById('exPickerList');
-  el.innerHTML = list.map((n, i) =>
-    `<div class="ex-list-item" onclick="pickFromList(${i})">${esc(n)}</div>`
-  ).join('');
+  el.innerHTML = list.map((e, i) => {
+    const grp = getGroupById(e.group);
+    const dotColor = grp ? grp.color : '#555';
+    const dotHTML = e.group ? `<span class="ex-group-dot" style="background:${dotColor}"></span>` : '';
+    return `<div class="ex-list-item" onclick="pickFromList(${i})">${dotHTML}<span>${esc(e.name)}</span></div>`;
+  }).join('');
 
-  const exact = list.find(n => normalizeName(n) === normalizeName(query));
+  const exact = list.find(e => normalizeName(e.name) === normalizeName(query));
   document.getElementById('btnAddCustom').style.display = (q && !exact) ? 'block' : 'none';
 }
 
 function pickFromList(idx) {
-  const name = window._pickerList[idx];
-  if (!name) return;
-  if (_pickerERMode) pickExerciseER(name);
-  else pickExercise(name);
+  const item = window._pickerList[idx];
+  if (!item) return;
+  if (_pickerERMode) pickExerciseER(item.name);
+  else pickExercise(item.name);
 }
 
 function pickExercise(name) {
+  ensureExerciseExists(name);
   currentWorkout.exercises.push({ name, sets: [] });
   saveCurrent();
   closePicker();
@@ -1210,6 +1343,7 @@ function pickExercise(name) {
 }
 
 function pickExerciseER(name) {
+  ensureExerciseExists(name);
   currentWorkout.exercises.push({ name, sets: [], er: true });
   saveCurrent();
   closePicker();
@@ -1705,20 +1839,24 @@ function openDictionary() {
 
 function renderDictionary(query) {
   const history = getHistory();
-  const exerciseMap = new Map();
+  const exercises = buildExerciseListFromHistory();
+  const countMap = new Map();
   history.forEach(w => {
     const seen = new Set();
     w.exercises.forEach(e => {
       const norm = normalizeName(e.name);
       if (!seen.has(norm)) {
         seen.add(norm);
-        if (!exerciseMap.has(norm)) exerciseMap.set(norm, { name: e.name, count: 0 });
-        exerciseMap.get(norm).count++;
+        countMap.set(norm, (countMap.get(norm) || 0) + 1);
       }
     });
   });
 
-  let list = [...exerciseMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  let list = exercises.map(e => ({
+    name: e.name, group: e.group || '',
+    count: countMap.get(normalizeName(e.name)) || 0
+  })).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+
   const q = (query || '').trim().toLowerCase();
   if (q) list = list.filter(item => item.name.toLowerCase().includes(q));
 
@@ -1728,9 +1866,14 @@ function renderDictionary(query) {
   el.innerHTML = list.map((item, i) => {
     const norm = normalizeName(item.name);
     const checked = dictSelected.has(norm) ? 'checked' : '';
+    const grp = getGroupById(item.group);
+    const groupHTML = grp
+      ? `<span style="background:${grp.color};color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px">${grp.name}</span>`
+      : `<span style="color:var(--text2);font-size:11px;cursor:pointer" onclick="event.preventDefault();event.stopPropagation();openGroupPicker(${i})">+ группа</span>`;
     return `<label class="dict-item">
       <input type="checkbox" ${checked} onchange="toggleDictItem(${i}, this.checked)">
       <span class="dict-name">${esc(item.name)}</span>
+      ${groupHTML}
       <span class="dict-count">${item.count}</span>
     </label>`;
   }).join('');
@@ -1785,6 +1928,11 @@ function renameExercise() {
     saveCurrent();
   }
 
+  // Update exercises list
+  const exList = getExercises();
+  const oldEx = exList.find(e => normalizeName(e.name) === oldNorm);
+  if (oldEx) { oldEx.name = newName.trim(); saveExercisesLocal(exList); syncExercisesToCloud(); }
+
   dictSelected.clear();
   renderDictionary(document.getElementById('dictSearchInput').value);
   showToast('Переименовано!');
@@ -1824,10 +1972,37 @@ function executeMerge(keepIdx) {
     saveCurrent();
   }
 
+  // Remove merged exercises from list, keep the winner
+  const exList = getExercises().filter(e => !otherNorms.has(normalizeName(e.name)));
+  saveExercisesLocal(exList);
+  syncExercisesToCloud();
+
   dictSelected.clear();
   document.getElementById('dictMergeNames').style.display = 'none';
   renderDictionary(document.getElementById('dictSearchInput').value);
   showToast('Упражнения объединены!');
+}
+
+function openGroupPicker(dictIdx) {
+  const item = window._dictItems[dictIdx];
+  if (!item) return;
+  window._groupPickerTarget = item.name;
+  const el = document.getElementById('dictMergeNames');
+  el.innerHTML = '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">Группа для ' + esc(item.name) + ':</div>' +
+    EX_GROUPS.filter(g => g.id !== 'all').map(g =>
+      `<button class="btn btn-ghost btn-sm" style="margin-bottom:6px;margin-right:4px;border:1.5px solid ${g.color};color:${g.color}" onclick="assignGroup('${g.id}')">${g.name}</button>`
+    ).join('') +
+    `<button class="btn btn-ghost btn-sm" style="margin-bottom:6px;color:var(--text2)" onclick="assignGroup('')">Убрать</button>`;
+  el.style.display = 'block';
+}
+
+function assignGroup(groupId) {
+  const name = window._groupPickerTarget;
+  if (!name) return;
+  setExerciseGroup(name, groupId);
+  document.getElementById('dictMergeNames').style.display = 'none';
+  renderDictionary(document.getElementById('dictSearchInput').value);
+  showToast('Группа обновлена!');
 }
 
 document.getElementById('modalDict').addEventListener('click', function(e) {
@@ -1906,28 +2081,48 @@ async function sheetRequest(action, payload) {
 async function syncToCloud() {
   if (!isConnected()) return;
   try {
-    // Save just the current state
     const h = getHistory();
     await sheetRequest('sync', { workouts: h });
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
   } catch(e) { console.error('Sync push failed:', e); }
 }
 
+async function syncExercisesToCloud() {
+  if (!isConnected()) return;
+  try {
+    await sheetRequest('sync_exercises', { exercises: getExercises() });
+  } catch(e) { console.error('Exercise sync failed:', e); }
+}
+
 async function syncFromCloud() {
   if (!isConnected()) return;
   try {
     const remote = await sheetRequest();
-    if (remote && Array.isArray(remote)) {
-      const local = getHistory();
-      const merged = new Map();
-      local.forEach(w => merged.set(w.id, w));
-      remote.forEach(w => merged.set(w.id, w));
-      const result = [...merged.values()].sort((a, b) => (a.number || 0) - (b.number || 0));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
-      localStorage.setItem(SYNC_KEY, new Date().toISOString());
-      const active = document.querySelector('.page.active');
-      if (active) showPage(active.id.replace('page-', ''));
+    if (!remote) return;
+    // Handle both old format (array) and new format ({ workouts, exercises })
+    const remoteWorkouts = Array.isArray(remote) ? remote : (remote.workouts || []);
+    const remoteExercises = Array.isArray(remote) ? [] : (remote.exercises || []);
+
+    // Merge workouts
+    const local = getHistory();
+    const merged = new Map();
+    local.forEach(w => merged.set(w.id, w));
+    remoteWorkouts.forEach(w => merged.set(w.id, w));
+    const result = [...merged.values()].sort((a, b) => (a.number || 0) - (b.number || 0));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
+
+    // Merge exercises — remote wins for group assignments
+    if (remoteExercises.length > 0) {
+      const localEx = getExercises();
+      const exMap = new Map();
+      localEx.forEach(e => exMap.set(normalizeName(e.name), e));
+      remoteExercises.forEach(e => exMap.set(normalizeName(e.name), e));
+      saveExercisesLocal([...exMap.values()]);
     }
+
+    localStorage.setItem(SYNC_KEY, new Date().toISOString());
+    const active = document.querySelector('.page.active');
+    if (active) showPage(active.id.replace('page-', ''));
   } catch(e) { console.error('Sync pull failed:', e); }
 }
 
@@ -2000,6 +2195,11 @@ async function connectSheet() {
     if (h.length > 0) {
       await sheetRequest('sync', { workouts: h });
     }
+    // Upload exercises
+    const ex = buildExerciseListFromHistory();
+    if (ex.length > 0) {
+      await sheetRequest('sync_exercises', { exercises: ex });
+    }
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
     renderSettings();
     showToast('Подключено!');
@@ -2032,6 +2232,7 @@ async function manualPush() {
   status.textContent = 'Выгружаю...';
   try {
     await sheetRequest('sync', { workouts: getHistory() });
+    await sheetRequest('sync_exercises', { exercises: getExercises() });
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
     status.textContent = 'Готово!';
     showToast('Выгружено в таблицу');
@@ -2058,6 +2259,7 @@ document.getElementById('modalSettings').addEventListener('click', function(e) {
 //  INIT
 // ═══════════════════════════════════
 seedIfNeeded();
+buildExerciseListFromHistory();
 currentWorkout = loadCurrent();
 renderHome();
 syncFromCloud();
