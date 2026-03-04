@@ -301,23 +301,40 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 }
 .hist-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
-/* Dictionary */
-.dict-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 0; border-bottom: 1px solid var(--surface2);
-  cursor: pointer; font-size: 14px;
+/* Exercises page */
+.ex-page-item {
+  background: var(--surface); border-radius: var(--radius); padding: 12px 14px;
+  margin-bottom: 8px; cursor: pointer;
 }
-.dict-item input[type="checkbox"] {
-  width: 20px; height: 20px; accent-color: var(--primary); flex-shrink: 0;
+.ex-page-item:active { background: var(--surface2); }
+.ex-page-row { display: flex; align-items: center; gap: 10px; }
+.ex-page-name { flex: 1; font-size: 15px; font-weight: 600; min-width: 0; }
+.ex-page-group {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+  flex-shrink: 0; color: #000;
 }
-.dict-name { flex: 1; min-width: 0; }
-.dict-count {
+.ex-page-count {
   color: var(--text2); font-size: 12px;
   background: var(--surface2); border-radius: 10px;
   padding: 2px 8px; flex-shrink: 0;
 }
-.dict-merge-names { margin-top: 10px; }
-.dict-merge-names .btn { margin-bottom: 6px; text-align: left; justify-content: flex-start; }
+.ex-page-check {
+  width: 20px; height: 20px; accent-color: var(--primary); flex-shrink: 0;
+}
+.ex-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface2); }
+.ex-detail.open { display: block; }
+.ex-detail-entry {
+  display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; font-size: 13px;
+}
+.ex-detail-date { color: var(--orange); font-weight: 600; min-width: 75px; flex-shrink: 0; }
+.ex-detail-sets { color: var(--text2); flex: 1; }
+.ex-actions-bar {
+  position: sticky; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--surface2);
+  padding: 10px 16px; display: none; gap: 8px; z-index: 50;
+  padding-bottom: calc(10px + 56px + env(safe-area-inset-bottom));
+}
+.ex-actions-bar.visible { display: flex; }
 
 /* Text export modal */
 .text-modal {
@@ -436,9 +453,8 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   <button class="btn btn-primary btn-block" onclick="startNewWorkout()" id="btnStart" style="margin-bottom:20px">
     Начать тренировку
   </button>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+  <div style="margin-bottom:12px">
     <h2 style="font-size:16px; color:var(--text2); margin:0">История</h2>
-    <button style="background:none;border:none;color:var(--primary);font-size:13px;cursor:pointer" onclick="openDictionary()">Справочник</button>
   </div>
   <div id="homeHistory"></div>
 </div>
@@ -548,17 +564,21 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   </div>
 </div>
 
-<!-- ═══════ MODAL: Exercise Dictionary ═══════ -->
-<div class="modal-bg" id="modalDict">
-  <div class="modal">
-    <h2>Справочник упражнений</h2>
-    <input class="search-input" id="dictSearchInput" placeholder="Поиск..." oninput="renderDictionary(this.value)">
-    <div id="dictList"></div>
-    <div id="dictMergeBar" style="display:none;margin-top:12px">
-      <button class="btn btn-primary btn-block" id="dictMergeBtn">Склеить</button>
-      <div class="dict-merge-names" id="dictMergeNames" style="display:none"></div>
-    </div>
+<!-- ═══════ PAGE: EXERCISES ═══════ -->
+<div class="page" id="page-exercises">
+  <h1>Упражнения</h1>
+  <div class="search-wrap" style="margin-bottom:8px">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+    <input class="search-input" id="exPageSearch" placeholder="Поиск..." oninput="renderExPage()">
   </div>
+  <div class="group-row" id="exPageGroupRow" style="margin-bottom:12px; padding-top:0"></div>
+  <div id="exPageList"></div>
+  <div class="ex-actions-bar" id="exActionsBar">
+    <button class="btn btn-ghost btn-sm" style="flex:1" id="exBtnRename" onclick="exPageRename()">Переименовать</button>
+    <button class="btn btn-ghost btn-sm" style="flex:1" id="exBtnMerge" onclick="exPageStartMerge()" style="display:none">Склеить</button>
+    <button class="btn btn-ghost btn-sm" id="exBtnGroup" onclick="exPageGroupPicker()">Группа</button>
+  </div>
+  <div id="exMergeNames" style="display:none; padding:10px 0;"></div>
 </div>
 
 <!-- ═══════ MODAL: Text export fallback ═══════ -->
@@ -578,6 +598,10 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
   <button onclick="showPage('workout')" data-page="workout">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="1"/><line x1="12" y1="7" x2="12" y2="17"/><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/></svg>
     Тренировка
+  </button>
+  <button onclick="showPage('exercises')" data-page="exercises">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h14"/><circle cx="19" cy="12" r="2"/></svg>
+    Упражнения
   </button>
   <button onclick="showPage('history')" data-page="history">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/><path d="M1 12A11 11 0 0112 1"/></svg>
@@ -908,21 +932,21 @@ const EXERCISES_KEY = 'wt_exercises';
 // ═══════════════════════════════════
 const EX_GROUPS = [
   { id: 'all', name: 'Все', color: '#9e9e9e',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="6" r="1.5"/><circle cx="12" cy="6" r="1.5"/><circle cx="19" cy="6" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="18" r="1.5"/><circle cx="12" cy="18" r="1.5"/><circle cx="19" cy="18" r="1.5"/></svg>' },
+    icon: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' },
   { id: 'chest', name: 'Грудь', color: '#ef5350',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9c0-2.5 3.5-4 8-4s8 1.5 8 4c0 3.5-3 6.5-4.5 7.5-.7.5-2.3.5-3 0C11 15.5 4 12.5 4 9z"/><line x1="12" y1="5" x2="12" y2="17"/></svg>' },
+    icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10c0-3 4-5 9-5s9 2 9 5c0 4-4 7-5.5 8-.8.5-2.2 1-3.5 1s-2.7-.5-3.5-1C7 17 3 14 3 10zm9-3c-4 0-6.5 1.2-6.5 3 0 2.5 3 5 4.5 6 .5.3 1.2.5 2 .5s1.5-.2 2-.5c1.5-1 4.5-3.5 4.5-6C18.5 8.2 16 7 12 7zm0-2v14" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' },
   { id: 'back', name: 'Спина', color: '#42a5f5',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v16"/><path d="M8 7c-2 1-3 3-3 5s1 4 3 5"/><path d="M16 7c2 1 3 3 3 5s-1 4-3 5"/><path d="M9 10h6"/><path d="M9 14h6"/></svg>' },
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="4" r="2"/><path d="M12 6v14"/><path d="M7 8l5 2 5-2"/><path d="M5 10c0 3 2 6 4 8"/><path d="M19 10c0 3-2 6-4 8"/><path d="M8 13l4 1 4-1"/></svg>' },
   { id: 'shoulders', name: 'Плечи', color: '#ab47bc',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="6" r="2.5"/><path d="M4 16c0-4 3.5-7 8-7s8 3 8 7"/></svg>' },
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="5.5" r="2.5"/><path d="M12 8v5"/><path d="M12 9c-2 0-5 1-7 4"/><path d="M12 9c2 0 5 1 7 4"/><circle cx="5" cy="13" r="2" fill="currentColor" opacity=".3"/><circle cx="19" cy="13" r="2" fill="currentColor" opacity=".3"/><path d="M8 20h8" stroke-width="2"/></svg>' },
   { id: 'biceps', name: 'Бицепс', color: '#ff9800',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 20l1-5c.3-1.5 1-3 2-4l3-3c1-1 1.5-2 1.5-3V4"/><path d="M14.5 4c1 0 2 1 2 2.5 0 2-1.5 3.5-3 5-1 1-1.7 2.5-2 4L10 20"/><path d="M11 8c1-.5 3-.5 4.5 1"/></svg>' },
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18l1-4c.5-2 1.5-3 2.5-4L14 6c1-1 2-3 2-4"/><path d="M16 2c1.5 0 3 1.5 2.5 4-.5 2-2 4-4 6-1 1-2 3-2.5 5L11 20"/><ellipse cx="14" cy="7" rx="3" ry="1.5" fill="currentColor" opacity=".25"/></svg>' },
   { id: 'triceps', name: 'Трицепс', color: '#26a69a',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 4v7c0 1.5-.5 3-2 4l-2 2"/><path d="M9 4c1.5 0 3 1 3 3v4c0 1.5.5 3 2 4l2 2"/><path d="M9 11h3"/></svg>' },
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3c0 0 0 5 0 7 0 2-2 4-3 5l-1 1"/><path d="M8 3c2 0 4 2 4 5 0 2 0 4 2 5.5L16 15"/><path d="M8 10c1.5 0 3 .5 4 1.5"/><ellipse cx="10" cy="6" rx="2.5" ry="1" fill="currentColor" opacity=".2"/></svg>' },
   { id: 'legs', name: 'Ноги', color: '#66bb6a',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 3v5c0 2-1 3-1.5 5S7 16 7 18v3"/><path d="M15 3v5c0 2 1 3 1.5 5s.5 3 .5 5v3"/><path d="M7 21h3"/><path d="M14 21h3"/></svg>' },
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2v6c0 2-.5 3-1 5-.5 1.5-.5 3-.5 5v2"/><path d="M16 2v6c0 2 .5 3 1 5 .5 1.5.5 3 .5 5v2"/><path d="M6.5 20h3"/><path d="M14.5 20h3"/><ellipse cx="8" cy="6" rx="2" ry="1.2" fill="currentColor" opacity=".25"/><ellipse cx="16" cy="6" rx="2" ry="1.2" fill="currentColor" opacity=".25"/></svg>' },
   { id: 'abs', name: 'Пресс', color: '#ffa726',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="18" x2="17" y2="18"/></svg>' },
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="6" y="2" width="12" height="20" rx="3"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="6" y1="7.5" x2="18" y2="7.5"/><line x1="6" y1="13" x2="18" y2="13"/><line x1="6.5" y1="18" x2="17.5" y2="18"/></svg>' },
 ];
 
 function getGroupById(id) { return EX_GROUPS.find(g => g.id === id); }
@@ -1024,6 +1048,7 @@ function showPage(name) {
   if (name === 'home') renderHome();
   if (name === 'history') renderFullHistory();
   if (name === 'workout') renderWorkout();
+  if (name === 'exercises') renderExPage();
 }
 
 // ═══════════════════════════════════
@@ -1827,17 +1852,11 @@ function editHistoryWorkout(id) {
 }
 
 // ═══════════════════════════════════
-//  EXERCISE DICTIONARY
+//  EXERCISES PAGE
 // ═══════════════════════════════════
-function openDictionary() {
-  dictSelected.clear();
-  document.getElementById('dictSearchInput').value = '';
-  document.getElementById('dictMergeNames').style.display = 'none';
-  renderDictionary('');
-  document.getElementById('modalDict').classList.add('open');
-}
+let _exPageGroup = 'all';
 
-function renderDictionary(query) {
+function renderExPage() {
   const history = getHistory();
   const exercises = buildExerciseListFromHistory();
   const countMap = new Map();
@@ -1845,10 +1864,7 @@ function renderDictionary(query) {
     const seen = new Set();
     w.exercises.forEach(e => {
       const norm = normalizeName(e.name);
-      if (!seen.has(norm)) {
-        seen.add(norm);
-        countMap.set(norm, (countMap.get(norm) || 0) + 1);
-      }
+      if (!seen.has(norm)) { seen.add(norm); countMap.set(norm, (countMap.get(norm) || 0) + 1); }
     });
   });
 
@@ -1857,56 +1873,113 @@ function renderDictionary(query) {
     count: countMap.get(normalizeName(e.name)) || 0
   })).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 
-  const q = (query || '').trim().toLowerCase();
+  // Group filter
+  if (_exPageGroup !== 'all') list = list.filter(item => item.group === _exPageGroup);
+
+  // Search filter
+  const q = (document.getElementById('exPageSearch')?.value || '').trim().toLowerCase();
   if (q) list = list.filter(item => item.name.toLowerCase().includes(q));
 
-  window._dictItems = list;
+  window._exPageItems = list;
 
-  const el = document.getElementById('dictList');
+  // Render group row
+  document.getElementById('exPageGroupRow').innerHTML = EX_GROUPS.map(g =>
+    `<div class="group-chip${_exPageGroup === g.id ? ' active' : ''}" onclick="exPageSelectGroup('${g.id}')">
+      ${g.icon}<span>${g.name}</span>
+    </div>`
+  ).join('');
+
+  // Render list
+  const el = document.getElementById('exPageList');
   el.innerHTML = list.map((item, i) => {
     const norm = normalizeName(item.name);
     const checked = dictSelected.has(norm) ? 'checked' : '';
     const grp = getGroupById(item.group);
-    const groupHTML = grp
-      ? `<span style="background:${grp.color};color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px">${grp.name}</span>`
-      : `<span style="color:var(--text2);font-size:11px;cursor:pointer" onclick="event.preventDefault();event.stopPropagation();openGroupPicker(${i})">+ группа</span>`;
-    return `<label class="dict-item">
-      <input type="checkbox" ${checked} onchange="toggleDictItem(${i}, this.checked)">
-      <span class="dict-name">${esc(item.name)}</span>
-      ${groupHTML}
-      <span class="dict-count">${item.count}</span>
-    </label>`;
+    const groupBadge = grp
+      ? `<span class="ex-page-group" style="background:${grp.color}">${grp.name}</span>`
+      : '';
+    return `<div class="ex-page-item" id="exItem-${i}">
+      <div class="ex-page-row">
+        <input type="checkbox" class="ex-page-check" ${checked} onchange="exPageToggle(${i}, this.checked)" onclick="event.stopPropagation()">
+        <span class="ex-page-name" onclick="exPageToggleDetail(${i})">${esc(item.name)}</span>
+        ${groupBadge}
+        <span class="ex-page-count" onclick="exPageToggleDetail(${i})">${item.count}x</span>
+      </div>
+      <div class="ex-detail" id="exDetail-${i}"></div>
+    </div>`;
   }).join('');
 
-  updateDictBar();
+  exPageUpdateBar();
+  document.getElementById('exMergeNames').style.display = 'none';
 }
 
-function toggleDictItem(idx, checked) {
-  const norm = normalizeName(window._dictItems[idx].name);
+function exPageSelectGroup(id) {
+  _exPageGroup = id;
+  renderExPage();
+}
+
+function exPageToggle(idx, checked) {
+  const norm = normalizeName(window._exPageItems[idx].name);
   if (checked) dictSelected.add(norm);
   else dictSelected.delete(norm);
-  document.getElementById('dictMergeNames').style.display = 'none';
-  updateDictBar();
+  exPageUpdateBar();
 }
 
-function updateDictBar() {
-  const bar = document.getElementById('dictMergeBar');
-  const btn = document.getElementById('dictMergeBtn');
+function exPageUpdateBar() {
+  const bar = document.getElementById('exActionsBar');
+  const btnRename = document.getElementById('exBtnRename');
+  const btnMerge = document.getElementById('exBtnMerge');
+  const btnGroup = document.getElementById('exBtnGroup');
   if (dictSelected.size === 1) {
-    bar.style.display = 'block';
-    btn.textContent = 'Переименовать';
-    btn.onclick = renameExercise;
+    bar.classList.add('visible');
+    btnRename.style.display = '';
+    btnMerge.style.display = 'none';
+    btnGroup.style.display = '';
   } else if (dictSelected.size >= 2) {
-    bar.style.display = 'block';
-    btn.textContent = 'Склеить выбранные (' + dictSelected.size + ')';
-    btn.onclick = startMerge;
+    bar.classList.add('visible');
+    btnRename.style.display = 'none';
+    btnMerge.style.display = '';
+    btnMerge.textContent = 'Склеить (' + dictSelected.size + ')';
+    btnGroup.style.display = '';
   } else {
-    bar.style.display = 'none';
+    bar.classList.remove('visible');
   }
 }
 
-function renameExercise() {
-  const items = window._dictItems;
+function exPageToggleDetail(idx) {
+  const el = document.getElementById('exDetail-' + idx);
+  if (el.classList.contains('open')) { el.classList.remove('open'); return; }
+
+  const item = window._exPageItems[idx];
+  const history = getHistory();
+  const norm = normalizeName(item.name);
+
+  // Gather all sessions for this exercise, newest first
+  const sessions = [];
+  for (let i = history.length - 1; i >= 0; i--) {
+    const w = history[i];
+    const ex = w.exercises.find(e => normalizeName(e.name) === norm);
+    if (ex) {
+      sessions.push({ date: w.date, number: w.number, sets: ex.sets });
+    }
+  }
+
+  if (sessions.length === 0) {
+    el.innerHTML = '<div style="color:var(--text2);font-size:13px;padding:4px 0">Нет данных</div>';
+  } else {
+    el.innerHTML = sessions.map(s => {
+      const setsStr = s.sets.map(st => `<span style="color:var(--orange)">${st.w}</span>×${st.r}`).join('  ');
+      return `<div class="ex-detail-entry">
+        <span class="ex-detail-date">${fmtDateDisplay(s.date)}</span>
+        <span class="ex-detail-sets">${setsStr || '—'}</span>
+      </div>`;
+    }).join('');
+  }
+  el.classList.add('open');
+}
+
+function exPageRename() {
+  const items = window._exPageItems;
   const selected = items.find(item => dictSelected.has(normalizeName(item.name)));
   if (!selected) return;
   const newName = prompt('Новое название:', selected.name);
@@ -1914,11 +1987,9 @@ function renameExercise() {
 
   const history = getHistory();
   const oldNorm = normalizeName(selected.name);
-  history.forEach(w => {
-    w.exercises.forEach(e => {
-      if (normalizeName(e.name) === oldNorm) e.name = newName.trim();
-    });
-  });
+  history.forEach(w => w.exercises.forEach(e => {
+    if (normalizeName(e.name) === oldNorm) e.name = newName.trim();
+  }));
   saveHistory(history);
 
   if (currentWorkout) {
@@ -1928,41 +1999,37 @@ function renameExercise() {
     saveCurrent();
   }
 
-  // Update exercises list
   const exList = getExercises();
   const oldEx = exList.find(e => normalizeName(e.name) === oldNorm);
   if (oldEx) { oldEx.name = newName.trim(); saveExercisesLocal(exList); syncExercisesToCloud(); }
 
   dictSelected.clear();
-  renderDictionary(document.getElementById('dictSearchInput').value);
+  renderExPage();
   showToast('Переименовано!');
 }
 
-function startMerge() {
-  const items = window._dictItems;
+function exPageStartMerge() {
+  const items = window._exPageItems;
   const selected = items.filter(item => dictSelected.has(normalizeName(item.name)));
-
   window._mergeSelected = selected;
 
-  const el = document.getElementById('dictMergeNames');
+  const el = document.getElementById('exMergeNames');
   el.innerHTML = '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">Оставить название:</div>' +
     selected.map((item, i) =>
-      `<button class="btn btn-ghost btn-block btn-sm" style="margin-bottom:6px;text-align:left;justify-content:flex-start" onclick="executeMerge(${i})">${esc(item.name)}</button>`
+      `<button class="btn btn-ghost btn-block btn-sm" style="margin-bottom:6px;text-align:left;justify-content:flex-start" onclick="exPageExecuteMerge(${i})">${esc(item.name)}</button>`
     ).join('');
   el.style.display = 'block';
 }
 
-function executeMerge(keepIdx) {
+function exPageExecuteMerge(keepIdx) {
   const keep = window._mergeSelected[keepIdx];
   const others = window._mergeSelected.filter((_, i) => i !== keepIdx);
   const otherNorms = new Set(others.map(o => normalizeName(o.name)));
 
   const history = getHistory();
-  history.forEach(w => {
-    w.exercises.forEach(e => {
-      if (otherNorms.has(normalizeName(e.name))) e.name = keep.name;
-    });
-  });
+  history.forEach(w => w.exercises.forEach(e => {
+    if (otherNorms.has(normalizeName(e.name))) e.name = keep.name;
+  }));
   saveHistory(history);
 
   if (currentWorkout) {
@@ -1972,42 +2039,39 @@ function executeMerge(keepIdx) {
     saveCurrent();
   }
 
-  // Remove merged exercises from list, keep the winner
   const exList = getExercises().filter(e => !otherNorms.has(normalizeName(e.name)));
   saveExercisesLocal(exList);
   syncExercisesToCloud();
 
   dictSelected.clear();
-  document.getElementById('dictMergeNames').style.display = 'none';
-  renderDictionary(document.getElementById('dictSearchInput').value);
+  document.getElementById('exMergeNames').style.display = 'none';
+  renderExPage();
   showToast('Упражнения объединены!');
 }
 
-function openGroupPicker(dictIdx) {
-  const item = window._dictItems[dictIdx];
-  if (!item) return;
-  window._groupPickerTarget = item.name;
-  const el = document.getElementById('dictMergeNames');
-  el.innerHTML = '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">Группа для ' + esc(item.name) + ':</div>' +
+function exPageGroupPicker() {
+  const el = document.getElementById('exMergeNames');
+  const count = dictSelected.size;
+  el.innerHTML = '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">Группа для ' + count + ' упр.:</div>' +
     EX_GROUPS.filter(g => g.id !== 'all').map(g =>
-      `<button class="btn btn-ghost btn-sm" style="margin-bottom:6px;margin-right:4px;border:1.5px solid ${g.color};color:${g.color}" onclick="assignGroup('${g.id}')">${g.name}</button>`
+      `<button class="btn btn-ghost btn-sm" style="margin-bottom:6px;margin-right:4px;border:1.5px solid ${g.color};color:${g.color}" onclick="exPageAssignGroup('${g.id}')">${g.name}</button>`
     ).join('') +
-    `<button class="btn btn-ghost btn-sm" style="margin-bottom:6px;color:var(--text2)" onclick="assignGroup('')">Убрать</button>`;
+    `<button class="btn btn-ghost btn-sm" style="margin-bottom:6px;color:var(--text2)" onclick="exPageAssignGroup('')">Убрать</button>`;
   el.style.display = 'block';
 }
 
-function assignGroup(groupId) {
-  const name = window._groupPickerTarget;
-  if (!name) return;
-  setExerciseGroup(name, groupId);
-  document.getElementById('dictMergeNames').style.display = 'none';
-  renderDictionary(document.getElementById('dictSearchInput').value);
+function exPageAssignGroup(groupId) {
+  const items = window._exPageItems;
+  items.forEach(item => {
+    if (dictSelected.has(normalizeName(item.name))) {
+      setExerciseGroup(item.name, groupId);
+    }
+  });
+  dictSelected.clear();
+  document.getElementById('exMergeNames').style.display = 'none';
+  renderExPage();
   showToast('Группа обновлена!');
 }
-
-document.getElementById('modalDict').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.remove('open');
-});
 
 // ═══════════════════════════════════
 //  HELPERS
