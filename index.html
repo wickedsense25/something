@@ -873,7 +873,12 @@ let dictSelected = new Set();
 let erState = null;
 
 function getHistory() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+  try {
+    const h = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    // Normalize dates to YYYY-MM-DD
+    h.forEach(w => { if (w.date && w.date.length > 10) w.date = fmtDateISO(new Date(w.date)); });
+    return h;
+  } catch { return []; }
 }
 function saveHistory(h) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(h));
@@ -1851,6 +1856,10 @@ function fmtDateISO(d) {
 }
 
 function fmtDateDisplay(iso) {
+  const dt = new Date(iso);
+  if (!isNaN(dt)) {
+    return String(dt.getDate()).padStart(2,'0') + '.' + String(dt.getMonth()+1).padStart(2,'0') + '.' + dt.getFullYear();
+  }
   const [y, m, d] = iso.split('-');
   return `${d}.${m}.${y}`;
 }
