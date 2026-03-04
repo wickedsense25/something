@@ -1864,61 +1864,42 @@ function esc(str) {
 }
 
 // ═══════════════════════════════════
-//  GIST SYNC
+//  GOOGLE SHEETS SYNC
 // ═══════════════════════════════════
-const TOKEN_KEY = 'wt_gh_token';
-const GIST_KEY = 'wt_gist_id';
+const SHEET_URL_KEY = 'wt_sheet_url';
 const SYNC_KEY = 'wt_last_sync';
 
-function getToken() { return localStorage.getItem(TOKEN_KEY); }
-function getGistId() { return localStorage.getItem(GIST_KEY); }
-function isConnected() { return !!(getToken() && getGistId()); }
+function getSheetUrl() { return localStorage.getItem(SHEET_URL_KEY); }
+function isConnected() { return !!getSheetUrl(); }
 
-async function gistRequest(method, path, body) {
-  const opts = {
-    method,
-    headers: {
-      'Authorization': `token ${getToken()}`,
-      'Accept': 'application/vnd.github.v3+json'
-    }
-  };
-  if (body) {
-    opts.headers['Content-Type'] = 'application/json';
-    opts.body = JSON.stringify(body);
+async function sheetRequest(action, payload) {
+  const url = getSheetUrl();
+  if (!url) throw new Error('Sheet URL not set');
+
+  if (!payload) {
+    // GET request
+    const resp = await fetch(url, { redirect: 'follow' });
+    if (!resp.ok) throw new Error('Sheet error: ' + resp.status);
+    return resp.json();
   }
-  const resp = await fetch(`https://api.github.com${path}`, opts);
-  if (!resp.ok) {
-    const err = await resp.text().catch(() => '');
-    throw new Error(`GitHub API ${resp.status}: ${err}`);
-  }
+
+  // POST request — text/plain avoids CORS preflight on Apps Script redirect
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, ...payload }),
+    redirect: 'follow',
+  });
+  if (!resp.ok) throw new Error('Sheet error: ' + resp.status);
   return resp.json();
-}
-
-async function createGist(data) {
-  const gist = await gistRequest('POST', '/gists', {
-    description: 'Workout Tracker Data',
-    public: false,
-    files: { 'workouts.json': { content: JSON.stringify(data, null, 2) } }
-  });
-  return gist.id;
-}
-
-async function loadGistData() {
-  const gist = await gistRequest('GET', `/gists/${getGistId()}`);
-  const content = gist.files['workouts.json']?.content;
-  return content ? JSON.parse(content) : null;
-}
-
-async function updateGistData(data) {
-  await gistRequest('PATCH', `/gists/${getGistId()}`, {
-    files: { 'workouts.json': { content: JSON.stringify(data, null, 2) } }
-  });
 }
 
 async function syncToCloud() {
   if (!isConnected()) return;
   try {
-    await updateGistData(getHistory());
+    // Save just the current state
+    const h = getHistory();
+    await sheetRequest('sync', { workouts: h });
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
   } catch(e) { console.error('Sync push failed:', e); }
 }
@@ -1926,19 +1907,34 @@ async function syncToCloud() {
 async function syncFromCloud() {
   if (!isConnected()) return;
   try {
-    const remote = await loadGistData();
-    if (remote && remote.length > 0) {
+    const remote = await sheetRequest();
+    if (remote && Array.isArray(remote)) {
       const local = getHistory();
       const merged = new Map();
       local.forEach(w => merged.set(w.id, w));
       remote.forEach(w => merged.set(w.id, w));
-      const result = [...merged.values()].sort((a, b) => a.date.localeCompare(b.date));
+      const result = [...merged.values()].sort((a, b) => (a.number || 0) - (b.number || 0));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
       localStorage.setItem(SYNC_KEY, new Date().toISOString());
       const active = document.querySelector('.page.active');
       if (active) showPage(active.id.replace('page-', ''));
     }
   } catch(e) { console.error('Sync pull failed:', e); }
+}
+
+async function saveWorkoutToSheet(workout) {
+  if (!isConnected()) return;
+  try {
+    await sheetRequest('save', { workout });
+    localStorage.setItem(SYNC_KEY, new Date().toISOString());
+  } catch(e) { console.error('Save to sheet failed:', e); }
+}
+
+async function deleteWorkoutFromSheet(id) {
+  if (!isConnected()) return;
+  try {
+    await sheetRequest('delete', { id });
+  } catch(e) { console.error('Delete from sheet failed:', e); }
 }
 
 // ── Settings UI ──
@@ -1952,49 +1948,54 @@ function renderSettings() {
   if (!isConnected()) {
     el.innerHTML = `
       <div class="settings-info">
-        Создай <b>Personal Access Token (classic)</b> на GitHub:<br>
-        Settings &rarr; Developer settings &rarr; Personal access tokens &rarr; Tokens (classic) &rarr; Generate new token<br>
-        Отметь только <b>gist</b>
+        <b>Подключение к Google Sheets:</b><br>
+        1. Создай Google Таблицу<br>
+        2. Extensions &rarr; Apps Script<br>
+        3. Вставь код из <b>google-apps-script.js</b><br>
+        4. Deploy &rarr; New deployment &rarr; Web app<br>
+        5. Вставь полученный URL сюда:
       </div>
-      <input class="search-input" id="ghTokenInput" type="password" placeholder="ghp_xxxxxxxxxxxx">
-      <button class="btn btn-primary btn-block" onclick="connectGist()" id="btnConnect" style="margin-top:8px">Подключить</button>
+      <input class="search-input" id="sheetUrlInput" type="url" placeholder="https://script.google.com/macros/s/...">
+      <button class="btn btn-primary btn-block" onclick="connectSheet()" id="btnConnect" style="margin-top:8px">Подключить</button>
       <div id="settingsError" style="color:var(--red);font-size:13px;margin-top:8px"></div>
     `;
   } else {
     const last = localStorage.getItem(SYNC_KEY);
     const syncStr = last ? new Date(last).toLocaleString('ru-RU') : 'никогда';
     el.innerHTML = `
-      <div class="settings-connected">Подключено</div>
-      <div class="settings-field">Gist: ${getGistId().slice(0,12)}...</div>
+      <div class="settings-connected">Подключено к Google Sheets</div>
       <div class="settings-field" style="margin-bottom:16px">Синхронизация: ${syncStr}</div>
-      <button class="btn btn-primary btn-block" onclick="manualPull()" style="margin-bottom:8px">Загрузить из облака</button>
-      <button class="btn btn-ghost btn-block" onclick="manualPush()" style="margin-bottom:8px">Выгрузить в облако</button>
-      <button class="btn btn-red btn-block" onclick="disconnectGist()">Отключить</button>
+      <button class="btn btn-primary btn-block" onclick="manualPull()" style="margin-bottom:8px">Загрузить из таблицы</button>
+      <button class="btn btn-ghost btn-block" onclick="manualPush()" style="margin-bottom:8px">Выгрузить в таблицу</button>
+      <button class="btn btn-red btn-block" onclick="disconnectSheet()">Отключить</button>
       <div id="settingsStatus" class="settings-syncing" style="display:none"></div>
     `;
   }
 }
 
-async function connectGist() {
-  const token = document.getElementById('ghTokenInput').value.trim();
-  if (!token) return;
+async function connectSheet() {
+  const url = document.getElementById('sheetUrlInput').value.trim();
+  if (!url) return;
   const errEl = document.getElementById('settingsError');
   const btn = document.getElementById('btnConnect');
   btn.disabled = true;
-  errEl.textContent = 'Проверяю токен...';
+  errEl.textContent = 'Проверяю подключение...';
   errEl.style.color = 'var(--orange)';
   try {
-    localStorage.setItem(TOKEN_KEY, token);
-    await gistRequest('GET', '/user');
-    errEl.textContent = 'Создаю хранилище...';
-    const gistId = await createGist(getHistory());
-    localStorage.setItem(GIST_KEY, gistId);
+    localStorage.setItem(SHEET_URL_KEY, url);
+    // Test connection by reading
+    await sheetRequest();
+    errEl.textContent = 'Загружаю данные в таблицу...';
+    // Upload all local data (seed + any user data)
+    const h = getHistory();
+    if (h.length > 0) {
+      await sheetRequest('sync', { workouts: h });
+    }
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
     renderSettings();
     showToast('Подключено!');
   } catch(e) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(GIST_KEY);
+    localStorage.removeItem(SHEET_URL_KEY);
     errEl.style.color = 'var(--red)';
     errEl.textContent = 'Ошибка: ' + e.message;
     btn.disabled = false;
@@ -2008,7 +2009,7 @@ async function manualPull() {
   try {
     await syncFromCloud();
     status.textContent = 'Готово!';
-    showToast('Загружено из облака');
+    showToast('Загружено из таблицы');
     setTimeout(() => { status.style.display = 'none'; }, 2000);
     renderSettings();
   } catch(e) {
@@ -2021,10 +2022,10 @@ async function manualPush() {
   status.style.display = 'block';
   status.textContent = 'Выгружаю...';
   try {
-    await updateGistData(getHistory());
+    await sheetRequest('sync', { workouts: getHistory() });
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
     status.textContent = 'Готово!';
-    showToast('Выгружено в облако');
+    showToast('Выгружено в таблицу');
     setTimeout(() => { status.style.display = 'none'; }, 2000);
     renderSettings();
   } catch(e) {
@@ -2032,10 +2033,9 @@ async function manualPush() {
   }
 }
 
-function disconnectGist() {
+function disconnectSheet() {
   if (!confirm('Отключить синхронизацию? Локальные данные останутся.')) return;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(GIST_KEY);
+  localStorage.removeItem(SHEET_URL_KEY);
   localStorage.removeItem(SYNC_KEY);
   renderSettings();
   showToast('Отключено');
