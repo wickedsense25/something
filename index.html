@@ -68,11 +68,12 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 .ex-card { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
 .ex-name { font-size: 16px; font-weight: 700; color: var(--primary); }
 .ex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.ex-prev-date { color: var(--orange); font-weight: 600; font-size: 11px; margin-bottom: 6px; }
-.ex-sets-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
-.ex-sets-divider {
-  width: 1px; height: 20px; background: var(--surface3); margin: 0 2px; flex-shrink: 0;
+.ex-prev {
+  background: var(--surface2); border-radius: 8px; padding: 8px 10px;
+  margin-bottom: 10px; font-size: 13px; color: var(--text2);
 }
+.ex-prev-date { color: var(--orange); font-weight: 600; margin-bottom: 2px; }
+.ex-sets-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .set-chip {
   background: var(--surface2); border-radius: 8px;
   padding: 6px 10px; font-size: 14px; cursor: pointer;
@@ -1138,23 +1139,35 @@ function renderWorkout() {
     const prev = findPrevExercise(ex.name, history);
     const isER = ex.er === true;
 
-    // Helper to render a single set chip
-    function setChipHTML(s, si, isCurrent) {
+    // Current sets as chips
+    const setsHTML = ex.sets.map((s, si) => {
       const isERSet = typeof s.r === 'string' && s.r.startsWith('ER');
-      const cls = isCurrent ? 'set-chip current-chip' : 'set-chip prev-chip';
-      const erCls = isERSet ? ' er-chip' : '';
-      const onclick = isCurrent ? ` onclick="deleteSet(${ei},${si})" title="Удалить"` : '';
-      const content = isERSet
-        ? (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') + `<span class="er-fmt">${fmtERDisplay(s.r)}</span>`
-        : (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') + `<span class="sr">${s.r}</span>`;
-      return `<div class="${cls}${erCls}"${onclick}>${content}</div>`;
-    }
+      if (isERSet) {
+        return `<div class="set-chip current-chip er-chip" onclick="deleteSet(${ei},${si})" title="Удалить">` +
+          (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') +
+          `<span class="er-fmt">${fmtERDisplay(s.r)}</span></div>`;
+      }
+      return `<div class="set-chip current-chip" onclick="deleteSet(${ei},${si})" title="Удалить">` +
+        (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') +
+        `<span class="sr">${s.r}</span></div>`;
+    }).join('');
 
-    // Build single row: prev chips, divider, current chips
-    const prevChips = prev ? prev.sets.map((s, i) => setChipHTML(s, i, false)).join('') : '';
-    const curChips = ex.sets.map((s, si) => setChipHTML(s, si, true)).join('');
-    const divider = (prevChips && curChips) ? '<div class="ex-sets-divider"></div>' : '';
-    const prevDateStr = prev ? `<div class="ex-prev-date">${fmtDateDisplay(prev.date)}</div>` : '';
+    // Previous sets as chips (dimmer)
+    let prevHTML = '';
+    if (prev) {
+      const prevSetsHTML = prev.sets.map(s => {
+        const isERSet = typeof s.r === 'string' && s.r.startsWith('ER');
+        if (isERSet) {
+          return `<div class="set-chip prev-chip er-chip">` +
+            (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') +
+            `<span class="er-fmt">${fmtERDisplay(s.r)}</span></div>`;
+        }
+        return `<div class="set-chip prev-chip">` +
+          (s.w > 0 ? `<span class="sw">${fmtW(s.w)}</span>&times;` : '') +
+          `<span class="sr">${s.r}</span></div>`;
+      }).join('');
+      prevHTML = `<div class="ex-prev"><div class="ex-prev-date">${fmtDateDisplay(prev.date)}</div><div class="ex-sets-row" style="margin:0">${prevSetsHTML}</div></div>`;
+    }
 
     const nameHTML = esc(ex.name) + (isER ? ' <span class="er-badge">ER</span>' : '');
     const actionBtn = isER
@@ -1166,8 +1179,8 @@ function renderWorkout() {
         <span class="ex-name">${nameHTML}</span>
         <button class="del-btn" onclick="removeExercise(${ei})">&times;</button>
       </div>
-      ${prevDateStr}
-      <div class="ex-sets-row">${prevChips}${divider}${curChips}</div>
+      ${prevHTML}
+      <div class="ex-sets-row">${setsHTML}</div>
       ${actionBtn}
     </div>`;
   }).join('');
