@@ -68,13 +68,11 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 .ex-card { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
 .ex-name { font-size: 16px; font-weight: 700; color: var(--primary); }
 .ex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.ex-columns { display: flex; gap: 8px; margin-bottom: 10px; }
-.ex-col-prev, .ex-col-cur { flex: 1; min-width: 0; }
-.ex-col-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; color: var(--text2); }
-.ex-col-cur .ex-col-label { color: var(--primary); }
-.ex-prev-date { color: var(--orange); font-weight: 600; font-size: 11px; margin-bottom: 4px; }
-.ex-sets-col { display: flex; flex-direction: column; gap: 4px; }
-.ex-sets-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ex-prev-date { color: var(--orange); font-weight: 600; font-size: 11px; margin-bottom: 6px; }
+.ex-sets-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
+.ex-sets-divider {
+  width: 1px; height: 20px; background: var(--surface3); margin: 0 2px; flex-shrink: 0;
+}
 .set-chip {
   background: var(--surface2); border-radius: 8px;
   padding: 6px 10px; font-size: 14px; cursor: pointer;
@@ -1150,14 +1148,11 @@ function renderWorkout() {
       return `<div class="${cls}${erCls}"${onclick}>${content}</div>`;
     }
 
-    // Build prev column
-    const prevSetsHTML = prev
-      ? prev.sets.map((s, i) => setChipHTML(s, i, false)).join('')
-      : '<div style="color:var(--text2);font-size:12px">—</div>';
-    const prevDateStr = prev ? fmtDateDisplay(prev.date) : '';
-
-    // Build current column
-    const curSetsHTML = ex.sets.map((s, si) => setChipHTML(s, si, true)).join('');
+    // Build single row: prev chips, divider, current chips
+    const prevChips = prev ? prev.sets.map((s, i) => setChipHTML(s, i, false)).join('') : '';
+    const curChips = ex.sets.map((s, si) => setChipHTML(s, si, true)).join('');
+    const divider = (prevChips && curChips) ? '<div class="ex-sets-divider"></div>' : '';
+    const prevDateStr = prev ? `<div class="ex-prev-date">${fmtDateDisplay(prev.date)}</div>` : '';
 
     const nameHTML = esc(ex.name) + (isER ? ' <span class="er-badge">ER</span>' : '');
     const actionBtn = isER
@@ -1169,16 +1164,8 @@ function renderWorkout() {
         <span class="ex-name">${nameHTML}</span>
         <button class="del-btn" onclick="removeExercise(${ei})">&times;</button>
       </div>
-      <div class="ex-columns">
-        <div class="ex-col-prev">
-          <div class="ex-col-label">Прошлая${prevDateStr ? ` <span style="color:var(--orange)">${prevDateStr}</span>` : ''}</div>
-          <div class="ex-sets-col">${prevSetsHTML}</div>
-        </div>
-        <div class="ex-col-cur">
-          <div class="ex-col-label">Сейчас</div>
-          <div class="ex-sets-col">${curSetsHTML}</div>
-        </div>
-      </div>
+      ${prevDateStr}
+      <div class="ex-sets-row">${prevChips}${divider}${curChips}</div>
       ${actionBtn}
     </div>`;
   }).join('');
