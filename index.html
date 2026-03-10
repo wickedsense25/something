@@ -173,19 +173,21 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 .addset-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 /* Last set info */
-.last-set-info {
-  background: var(--surface); border-radius: 8px; padding: 8px 12px;
-  margin: 8px 16px 0; font-size: 14px; color: var(--text2);
-  flex-shrink: 0;
+.addset-info-bar {
+  display: flex; gap: 8px; margin: 8px 16px 0; flex-shrink: 0;
 }
-.last-set-info .last-set-val { color: var(--green); font-weight: 700; }
-.last-set-info .prev-date { color: var(--orange); font-weight: 600; font-size: 12px; }
-.last-set-row { display: flex; align-items: center; gap: 8px; }
-.last-set-content { flex: 1; min-width: 0; text-align: center; }
-.del-last-set {
+.addset-info-prev, .addset-info-cur {
+  flex: 1; min-width: 0;
+  background: var(--surface); border-radius: 8px; padding: 6px 10px;
+  font-size: 13px; color: var(--text2);
+}
+.addset-info-prev .info-label { color: var(--orange); font-weight: 600; font-size: 11px; margin-bottom: 2px; }
+.addset-info-cur .info-label { color: var(--primary); font-weight: 600; font-size: 11px; margin-bottom: 2px; }
+.addset-info-cur .cur-set-val { color: var(--green); font-weight: 700; }
+.addset-info-cur .del-last-set {
   background: none; border: none; color: var(--red);
-  font-size: 18px; cursor: pointer; padding: 0 2px;
-  opacity: 0.6; flex-shrink: 0;
+  font-size: 16px; cursor: pointer; padding: 0 2px;
+  opacity: 0.6; flex-shrink: 0; float: right;
 }
 
 /* Weight section */
@@ -550,7 +552,7 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
     <span style="color:var(--text2); font-size:13px" id="addSetInfo">Подход #1</span>
   </div>
   <div class="addset-body">
-    <div class="last-set-info" id="lastSetInfo" style="display:none"></div>
+    <div class="addset-info-bar" id="addsetInfoBar"></div>
     <div class="weight-section">
       <div class="weight-adjust-row">
         <button class="weight-adj dec" onclick="adjustWeight(-10)">-10</button>
@@ -1473,25 +1475,34 @@ function updateSetCounter() {
 
 function updateLastSetInfo() {
   const ex = currentWorkout.exercises[addSetExIdx];
-  const el = document.getElementById('lastSetInfo');
-  if (ex.sets.length === 0) {
-    const prev = findPrevExercise(ex.name, getHistory());
-    if (prev) {
-      const prevSets = prev.sets.map(s =>
-        s.w > 0 ? `${fmtW(s.w)}\u00d7${s.r}` : `${s.r}`
-      ).join('  ');
-      el.innerHTML = `<span class="prev-date">${fmtDateDisplay(prev.date)}</span><br>${prevSets}`;
-      el.style.display = 'block';
-    } else {
-      el.style.display = 'none';
-    }
-  } else {
-    const setsStr = ex.sets.map(s =>
-      s.w > 0 ? `<span class="last-set-val">${fmtW(s.w)}\u00d7${s.r}</span>` : `<span class="last-set-val">${s.r}</span>`
-    ).join(', ');
-    el.innerHTML = `<div class="last-set-row"><div class="last-set-content">${setsStr}<span class="dots-anim"><span>.</span><span>.</span><span>.</span></span></div><button class="del-last-set" onclick="deleteLastSet()">&times;</button></div>`;
-    el.style.display = 'block';
+  const bar = document.getElementById('addsetInfoBar');
+  const prev = findPrevExercise(ex.name, getHistory());
+
+  // Left: previous workout (always shown if exists)
+  let prevHTML = '';
+  if (prev) {
+    const prevSets = prev.sets.map(s =>
+      s.w > 0 ? `${fmtW(s.w)}\u00d7${s.r}` : `${s.r}`
+    ).join('  ');
+    prevHTML = `<div class="addset-info-prev">
+      <div class="info-label">${fmtDateDisplay(prev.date)}</div>
+      ${prevSets}
+    </div>`;
   }
+
+  // Right: current sets (shown when at least 1 set done)
+  let curHTML = '';
+  if (ex.sets.length > 0) {
+    const curSets = ex.sets.map(s =>
+      s.w > 0 ? `<span class="cur-set-val">${fmtW(s.w)}\u00d7${s.r}</span>` : `<span class="cur-set-val">${s.r}</span>`
+    ).join('  ');
+    curHTML = `<div class="addset-info-cur">
+      <div class="info-label">Сейчас <button class="del-last-set" onclick="deleteLastSet()">&times;</button></div>
+      ${curSets}<span class="dots-anim"><span>.</span><span>.</span><span>.</span></span>
+    </div>`;
+  }
+
+  bar.innerHTML = prevHTML + curHTML;
 }
 
 function deleteLastSet() {
