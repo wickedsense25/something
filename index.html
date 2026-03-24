@@ -66,6 +66,31 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 
 /* Exercise card */
 .ex-card { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+/* Superset group */
+.superset-group {
+  border-left: 3px solid var(--primary); border-radius: var(--radius);
+  margin-bottom: 10px;
+}
+.superset-group .ex-card { margin-bottom: 0; border-radius: 0; }
+.superset-group .ex-card:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+.superset-group .ex-card:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+.superset-group .ex-card + .ex-card { border-top: 1px dashed var(--primary); }
+.superset-label {
+  background: var(--primary); color: #000; font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
+}
+/* Superset active indicator in add-set */
+.addset-superset-tabs {
+  display: flex; margin: 0 16px; flex-shrink: 0;
+}
+.addset-superset-tab {
+  flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 600;
+  cursor: pointer; background: var(--surface2); color: var(--text2);
+  transition: all .15s; border: none;
+}
+.addset-superset-tab:first-child { border-radius: 8px 0 0 8px; }
+.addset-superset-tab:last-child { border-radius: 0 8px 8px 0; }
+.addset-superset-tab.active { background: var(--primary); color: #000; }
 .ex-name { font-size: 16px; font-weight: 700; color: var(--primary); }
 .ex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .ex-prev {
@@ -506,6 +531,7 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 
   <div style="display:flex; gap:8px; margin-bottom:12px">
     <button class="btn btn-ghost" style="flex:1" onclick="openExercisePicker()">+ Упражнение</button>
+    <button class="btn btn-ghost" style="flex-shrink:0; color:var(--primary); border:1px solid var(--primary)" onclick="openSupersetPicker()">+ Суперсет</button>
     <button class="btn btn-ghost" style="flex-shrink:0; color:var(--orange); border:1px solid var(--orange-dim)" onclick="openExercisePicker(true)">+ ER</button>
   </div>
 
@@ -547,6 +573,7 @@ h1 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
 
 <!-- ═══════ FULLSCREEN: Add Set ═══════ -->
 <div class="addset-screen" id="addSetScreen">
+  <div class="addset-superset-tabs" id="supersetTabs" style="display:none"></div>
   <div class="addset-header">
     <button class="addset-back" onclick="closeAddSet()">&#8592; Назад</button>
     <h3 id="addSetExName">Exercise</h3>
@@ -1135,11 +1162,12 @@ function renderWorkout() {
   }
 
   const history = getHistory();
-  container.innerHTML = currentWorkout.exercises.map((ex, ei) => {
+
+  function renderExCard(ex, ei) {
     const prev = findPrevExercise(ex.name, history);
     const isER = ex.er === true;
+    const isSS = !!ex.ssId;
 
-    // Current sets as chips
     const setsHTML = ex.sets.map((s, si) => {
       const isERSet = typeof s.r === 'string' && s.r.startsWith('ER');
       if (isERSet) {
@@ -1152,7 +1180,6 @@ function renderWorkout() {
         `<span class="sr">${s.r}</span></div>`;
     }).join('');
 
-    // Previous sets as chips (dimmer)
     let prevHTML = '';
     if (prev) {
       const prevSetsHTML = prev.sets.map(s => {
@@ -1169,7 +1196,9 @@ function renderWorkout() {
       prevHTML = `<div class="ex-prev"><div class="ex-prev-date">${fmtDateDisplay(prev.date)}</div><div class="ex-sets-row" style="margin:0">${prevSetsHTML}</div></div>`;
     }
 
-    const nameHTML = esc(ex.name) + (isER ? ' <span class="er-badge">ER</span>' : '');
+    const badges = (isER ? ' <span class="er-badge">ER</span>' : '') +
+                   (isSS ? ' <span class="superset-label">SS</span>' : '');
+    const nameHTML = esc(ex.name) + badges;
     const actionBtn = isER
       ? `<button class="btn btn-ghost btn-block" onclick="openERMode(${ei})" style="font-size:14px;color:var(--orange)">${ex.sets.length > 0 ? 'Ещё ER' : 'Начать ER'}</button>`
       : `<button class="btn btn-ghost btn-block" onclick="openAddSet(${ei})" style="font-size:14px">+ Подход</button>`;
@@ -1183,11 +1212,36 @@ function renderWorkout() {
       <div class="ex-sets-row">${setsHTML}</div>
       ${actionBtn}
     </div>`;
-  }).join('');
+  }
+
+  // Group cards, wrapping superset pairs
+  let html = '';
+  const rendered = new Set();
+  for (let i = 0; i < currentWorkout.exercises.length; i++) {
+    if (rendered.has(i)) continue;
+    rendered.add(i);
+    const ex = currentWorkout.exercises[i];
+    if (ex.ssId) {
+      const partner = getSupersetPartner(i);
+      if (partner >= 0) {
+        rendered.add(partner);
+        html += `<div class="superset-group">${renderExCard(ex, i)}${renderExCard(currentWorkout.exercises[partner], partner)}</div>`;
+        continue;
+      }
+    }
+    html += renderExCard(ex, i);
+  }
+  container.innerHTML = html;
 }
 
 function removeExercise(ei) {
-  currentWorkout.exercises.splice(ei, 1);
+  const ex = currentWorkout.exercises[ei];
+  if (ex.ssId) {
+    // Remove both superset partners
+    currentWorkout.exercises = currentWorkout.exercises.filter(e => e.ssId !== ex.ssId);
+  } else {
+    currentWorkout.exercises.splice(ei, 1);
+  }
   saveCurrent();
   renderWorkout();
 }
@@ -1235,8 +1289,15 @@ async function exportWorkoutTextFromData(workout) {
   const [y, m, d] = workout.date.split('-');
   let text = `Тренировка ${workout.number} - ${d}.${m}\n\n`;
 
+  const ssIds = new Set();
   for (const ex of workout.exercises) {
     if (ex.sets.length === 0) continue;
+
+    // Mark superset start
+    if (ex.ssId && !ssIds.has(ex.ssId)) {
+      ssIds.add(ex.ssId);
+      text += `[Суперсет]\n`;
+    }
 
     const erSets = ex.sets.filter(s => typeof s.r === 'string' && s.r.startsWith('ER'));
     const normalSets = ex.sets.filter(s => !(typeof s.r === 'string' && s.r.startsWith('ER')));
@@ -1339,6 +1400,8 @@ function openExercisePicker(erMode) {
 
 function closePicker() {
   document.getElementById('modalPicker').classList.remove('open');
+  _pickerSupersetMode = false;
+  _supersetFirstName = null;
 }
 
 function renderGroupRow() {
@@ -1387,6 +1450,7 @@ function renderExercisePickerList(query) {
 function pickFromList(idx) {
   const item = window._pickerList[idx];
   if (!item) return;
+  if (_pickerSupersetMode) { pickSupersetExercise(item.name); return; }
   if (_pickerERMode) pickExerciseER(item.name);
   else pickExercise(item.name);
 }
@@ -1412,8 +1476,61 @@ function pickExerciseER(name) {
 function addCustomExercise() {
   const name = document.getElementById('exSearchInput').value.trim();
   if (!name) return;
+  if (_pickerSupersetMode) { pickSupersetExercise(name); return; }
   if (_pickerERMode) pickExerciseER(name);
   else pickExercise(name);
+}
+
+// ═══════════════════════════════════
+//  SUPERSET
+// ═══════════════════════════════════
+let _pickerSupersetMode = false;
+let _supersetFirstName = null;
+let _supersetId = 0;
+
+function openSupersetPicker() {
+  if (!currentWorkout) return;
+  _pickerSupersetMode = true;
+  _pickerERMode = false;
+  _supersetFirstName = null;
+  _pickerGroup = 'all';
+  document.getElementById('exSearchInput').value = '';
+  renderGroupRow();
+  renderExercisePickerList('');
+  document.getElementById('pickerTitle').textContent = 'Суперсет: 1-е упражнение';
+  document.getElementById('modalPicker').classList.add('open');
+  setTimeout(() => document.getElementById('exSearchInput').focus(), 100);
+}
+
+function pickSupersetExercise(name) {
+  ensureExerciseExists(name);
+  if (!_supersetFirstName) {
+    // First exercise picked
+    _supersetFirstName = name;
+    document.getElementById('exSearchInput').value = '';
+    document.getElementById('pickerTitle').textContent = 'Суперсет: 2-е упражнение';
+    renderExercisePickerList('');
+    setTimeout(() => document.getElementById('exSearchInput').focus(), 100);
+  } else {
+    // Second exercise picked — create superset
+    const ssId = ++_supersetId;
+    currentWorkout.exercises.push({ name: _supersetFirstName, sets: [], ssId });
+    currentWorkout.exercises.push({ name, sets: [], ssId });
+    saveCurrent();
+    _pickerSupersetMode = false;
+    _supersetFirstName = null;
+    closePicker();
+    renderWorkout();
+  }
+}
+
+function getSupersetPartner(exIdx) {
+  const ex = currentWorkout.exercises[exIdx];
+  if (!ex || !ex.ssId) return -1;
+  for (let i = 0; i < currentWorkout.exercises.length; i++) {
+    if (i !== exIdx && currentWorkout.exercises[i].ssId === ex.ssId) return i;
+  }
+  return -1;
 }
 
 
@@ -1464,6 +1581,7 @@ function openAddSet(exIdx) {
 
   updateLastSetInfo();
   renderStaging();
+  renderSupersetTabs();
   document.getElementById('addSetScreen').classList.add('open');
 }
 
@@ -1575,9 +1693,37 @@ function recordCurrentSet() {
 
   repsStaging = '';
   compoundMode = false;
+
+  // Auto-switch superset partner
+  const partner = getSupersetPartner(addSetExIdx);
+  if (partner >= 0) {
+    switchToExercise(partner);
+  } else {
+    updateSetCounter();
+    updateLastSetInfo();
+    renderStaging();
+  }
+}
+
+function switchToExercise(exIdx) {
+  addSetExIdx = exIdx;
+  const ex = currentWorkout.exercises[exIdx];
+  document.getElementById('addSetExName').textContent = ex.name;
+
+  // Set weight from last set of this exercise, or prev workout
+  let defaultW = 0;
+  if (ex.sets.length > 0) {
+    defaultW = ex.sets[ex.sets.length - 1].w;
+  } else {
+    const prev = findPrevExercise(ex.name, getHistory());
+    if (prev && prev.sets.length > 0) defaultW = prev.sets[0].w;
+  }
+  document.getElementById('weightInput').value = defaultW;
+
   updateSetCounter();
   updateLastSetInfo();
   renderStaging();
+  renderSupersetTabs();
 }
 
 function finishExercise() {
@@ -1585,6 +1731,23 @@ function finishExercise() {
     recordCurrentSet();
   }
   closeAddSet();
+}
+
+function renderSupersetTabs() {
+  const tabs = document.getElementById('supersetTabs');
+  const ex = currentWorkout.exercises[addSetExIdx];
+  if (!ex || !ex.ssId) {
+    tabs.style.display = 'none';
+    return;
+  }
+  const partner = getSupersetPartner(addSetExIdx);
+  if (partner < 0) { tabs.style.display = 'none'; return; }
+  const partnerEx = currentWorkout.exercises[partner];
+  tabs.style.display = 'flex';
+  tabs.innerHTML = `
+    <button class="addset-superset-tab active" onclick="switchToExercise(${addSetExIdx})">${esc(ex.name)}</button>
+    <button class="addset-superset-tab" onclick="switchToExercise(${partner})">${esc(partnerEx.name)}</button>
+  `;
 }
 
 function renderStaging() {
@@ -1826,7 +1989,13 @@ function renderFullHistory() {
 
 function historyCardHTML(w, idPrefix, showActions) {
   const exNames = w.exercises.map(e => e.name).join(', ');
+  const histSsIds = new Set();
   let detailHTML = w.exercises.map(ex => {
+    let ssLabel = '';
+    if (ex.ssId && !histSsIds.has(ex.ssId)) {
+      histSsIds.add(ex.ssId);
+      ssLabel = '<div style="color:var(--primary);font-size:11px;font-weight:700;margin:4px 0 2px">СУПЕРСЕТ</div>';
+    }
     const setsStr = ex.sets.map(s => {
       const isERSet = typeof s.r === 'string' && s.r.startsWith('ER');
       if (isERSet) {
@@ -1834,7 +2003,7 @@ function historyCardHTML(w, idPrefix, showActions) {
       }
       return s.w > 0 ? `${fmtW(s.w)}&times;${s.r}` : `${s.r}`;
     }).join('&ensp;');
-    return `<div class="hist-ex-name">${esc(ex.name)}</div><div class="hist-ex-sets">${setsStr}</div>`;
+    return `${ssLabel}<div class="hist-ex-name">${esc(ex.name)}</div><div class="hist-ex-sets">${setsStr}</div>`;
   }).join('');
 
   let actionsHTML = '';
@@ -2381,6 +2550,10 @@ document.getElementById('modalSettings').addEventListener('click', function(e) {
 seedIfNeeded();
 buildExerciseListFromHistory();
 currentWorkout = loadCurrent();
+// Restore superset counter from existing workout
+if (currentWorkout) {
+  currentWorkout.exercises.forEach(e => { if (e.ssId && e.ssId > _supersetId) _supersetId = e.ssId; });
+}
 renderHome();
 syncFromCloud();
 
