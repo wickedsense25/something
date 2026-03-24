@@ -2345,46 +2345,59 @@ const SYNC_KEY = 'wt_last_sync';
 function getSheetUrl() { return localStorage.getItem(SHEET_URL_KEY); }
 function isConnected() { return !!getSheetUrl(); }
 
+let _syncInProgress = false;
+
 async function sheetRequest(action, payload) {
   const url = getSheetUrl();
   if (!url) throw new Error('Sheet URL not set');
 
-  if (!payload) {
-    // GET request
-    const resp = await fetch(url, { redirect: 'follow' });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+  try {
+    if (!payload) {
+      const resp = await fetch(url, { redirect: 'follow', signal: controller.signal });
+      if (!resp.ok) throw new Error('Sheet error: ' + resp.status);
+      return resp.json();
+    }
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, ...payload }),
+      redirect: 'follow',
+      signal: controller.signal,
+    });
     if (!resp.ok) throw new Error('Sheet error: ' + resp.status);
     return resp.json();
+  } finally {
+    clearTimeout(timeout);
   }
-
-  // POST request — text/plain avoids CORS preflight on Apps Script redirect
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...payload }),
-    redirect: 'follow',
-  });
-  if (!resp.ok) throw new Error('Sheet error: ' + resp.status);
-  return resp.json();
 }
 
 async function syncToCloud() {
-  if (!isConnected()) return;
+  if (!isConnected() || _syncInProgress) return;
+  _syncInProgress = true;
   try {
     const h = getHistory();
     await sheetRequest('sync', { workouts: h });
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
   } catch(e) { console.error('Sync push failed:', e); }
+  finally { _syncInProgress = false; }
 }
 
 async function syncExercisesToCloud() {
-  if (!isConnected()) return;
+  if (!isConnected() || _syncInProgress) return;
+  _syncInProgress = true;
   try {
     await sheetRequest('sync_exercises', { exercises: getExercises() });
   } catch(e) { console.error('Exercise sync failed:', e); }
+  finally { _syncInProgress = false; }
 }
 
 async function syncFromCloud() {
-  if (!isConnected()) return;
+  if (!isConnected() || _syncInProgress) return;
+  _syncInProgress = true;
   try {
     const remote = await sheetRequest();
     if (!remote) return;
@@ -2413,6 +2426,7 @@ async function syncFromCloud() {
     const active = document.querySelector('.page.active');
     if (active) showPage(active.id.replace('page-', ''));
   } catch(e) { console.error('Sync pull failed:', e); }
+  finally { _syncInProgress = false; }
 }
 
 async function saveWorkoutToSheet(workout) {
@@ -2501,6 +2515,7 @@ async function connectSheet() {
 }
 
 async function manualPull() {
+  if (_syncInProgress) { showToast('Синхронизация уже идёт...'); return; }
   const status = document.getElementById('settingsStatus');
   status.style.display = 'block';
   status.textContent = 'Загружаю...';
@@ -2511,7 +2526,7 @@ async function manualPull() {
     setTimeout(() => { status.style.display = 'none'; }, 2000);
     renderSettings();
   } catch(e) {
-    status.textContent = 'Ошибка: ' + e.message;
+    status.textContent = 'Ошибка: ' + (e.name === 'AbortError' ? 'Таймаут (15с)' : e.message);
   }
 }
 
@@ -2519,8 +2534,10 @@ async function manualPush() {
   const status = document.getElementById('settingsStatus');
   status.style.display = 'block';
   status.textContent = 'Выгружаю...';
+  _syncInProgress = true;
   try {
     await sheetRequest('sync', { workouts: getHistory() });
+    status.textContent = 'Выгружаю упражнения...';
     await sheetRequest('sync_exercises', { exercises: getExercises() });
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
     status.textContent = 'Готово!';
@@ -2528,8 +2545,8 @@ async function manualPush() {
     setTimeout(() => { status.style.display = 'none'; }, 2000);
     renderSettings();
   } catch(e) {
-    status.textContent = 'Ошибка: ' + e.message;
-  }
+    status.textContent = 'Ошибка: ' + (e.name === 'AbortError' ? 'Таймаут (15с)' : e.message);
+  } finally { _syncInProgress = false; }
 }
 
 function disconnectSheet() {
