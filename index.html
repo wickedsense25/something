@@ -2352,7 +2352,7 @@ async function sheetRequest(action, payload) {
   if (!url) throw new Error('Sheet URL not set');
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
   try {
     if (!payload) {
@@ -2526,7 +2526,7 @@ async function manualPull() {
     setTimeout(() => { status.style.display = 'none'; }, 2000);
     renderSettings();
   } catch(e) {
-    status.textContent = 'Ошибка: ' + (e.name === 'AbortError' ? 'Таймаут (15с)' : e.message);
+    status.textContent = 'Ошибка: ' + (e.name === 'AbortError' ? 'Таймаут (30с)' : e.message);
   }
 }
 
@@ -2545,7 +2545,7 @@ async function manualPush() {
     setTimeout(() => { status.style.display = 'none'; }, 2000);
     renderSettings();
   } catch(e) {
-    status.textContent = 'Ошибка: ' + (e.name === 'AbortError' ? 'Таймаут (15с)' : e.message);
+    status.textContent = 'Ошибка: ' + (e.name === 'AbortError' ? 'Таймаут (30с)' : e.message);
   } finally { _syncInProgress = false; }
 }
 

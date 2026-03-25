@@ -13,11 +13,8 @@
 
 function doGet(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // Return both workouts and exercises
   const workouts = readWorkouts(ss);
   const exercises = readExercises(ss);
-
   return jsonResponse({ workouts, exercises });
 }
 
@@ -48,26 +45,37 @@ function doPost(e) {
 
   } else if (action === 'sync') {
     const sheet = getOrCreateSheet(ss, 'workouts', ['id', 'number', 'date', 'exercises_json']);
+    // Clear old data
     if (sheet.getLastRow() > 1) {
-      sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).clearContent();
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
     }
-    for (const w of payload.workouts) {
-      sheet.appendRow([w.id, w.number, w.date, JSON.stringify(w.exercises)]);
+    // Batch write all rows at once (fast!)
+    const rows = (payload.workouts || []).map(w =>
+      [w.id, w.number, w.date, JSON.stringify(w.exercises)]
+    );
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, 4).setValues(rows);
     }
     sortSheet(sheet, 2);
-    return jsonResponse({ ok: true, count: payload.workouts.length });
+    // Clean up extra empty rows
+    cleanEmptyRows(sheet, rows.length);
+    return jsonResponse({ ok: true, count: rows.length });
 
   // ── Exercises ──
   } else if (action === 'sync_exercises') {
     const sheet = getOrCreateSheet(ss, 'exercises', ['name', 'group']);
     if (sheet.getLastRow() > 1) {
-      sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).clearContent();
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
     }
-    for (const ex of payload.exercises) {
-      sheet.appendRow([ex.name, ex.group || '']);
+    const rows = (payload.exercises || []).map(ex =>
+      [ex.name, ex.group || '']
+    );
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, 2).setValues(rows);
     }
     sortSheet(sheet, 1);
-    return jsonResponse({ ok: true, count: payload.exercises.length });
+    cleanEmptyRows(sheet, rows.length);
+    return jsonResponse({ ok: true, count: rows.length });
 
   } else if (action === 'get_exercises') {
     return jsonResponse(readExercises(ss));
@@ -126,6 +134,14 @@ function findRowById(sheet, id) {
 function sortSheet(sheet, col) {
   if (sheet.getLastRow() <= 1) return;
   sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).sort({ column: col, ascending: true });
+}
+
+function cleanEmptyRows(sheet, dataRows) {
+  const totalRows = sheet.getMaxRows();
+  const neededRows = dataRows + 1; // +1 for header
+  if (totalRows > neededRows + 10) {
+    sheet.deleteRows(neededRows + 1, totalRows - neededRows);
+  }
 }
 
 function jsonResponse(data) {
