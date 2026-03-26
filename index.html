@@ -1035,11 +1035,23 @@ function getExerciseGroup(name) {
   const ex = getExercises().find(e => normalizeName(e.name) === normalizeName(name));
   return ex ? ex.group : '';
 }
+function getExerciseGroup2(name) {
+  const ex = getExercises().find(e => normalizeName(e.name) === normalizeName(name));
+  return ex ? (ex.group2 || '') : '';
+}
 function setExerciseGroup(name, group) {
   const list = getExercises();
   const norm = normalizeName(name);
   const existing = list.find(e => normalizeName(e.name) === norm);
   if (existing) { existing.group = group; } else { list.push({ name, group }); }
+  saveExercisesLocal(list);
+  syncExercisesToCloud();
+}
+function setExerciseGroup2(name, group2) {
+  const list = getExercises();
+  const norm = normalizeName(name);
+  const existing = list.find(e => normalizeName(e.name) === norm);
+  if (existing) { existing.group2 = group2; } else { list.push({ name, group: '', group2 }); }
   saveExercisesLocal(list);
   syncExercisesToCloud();
 }
@@ -1426,7 +1438,7 @@ function renderExercisePickerList(query) {
 
   // Filter by group
   if (_pickerGroup !== 'all') {
-    list = list.filter(e => e.group === _pickerGroup);
+    list = list.filter(e => e.group === _pickerGroup || (e.group2 && e.group2 === _pickerGroup));
   }
 
   // Filter by search
@@ -1438,9 +1450,11 @@ function renderExercisePickerList(query) {
   const el = document.getElementById('exPickerList');
   el.innerHTML = list.map((e, i) => {
     const grp = getGroupById(e.group);
+    const grp2 = getGroupById(e.group2);
     const dotColor = grp ? grp.color : '#555';
     const dotHTML = e.group ? `<span class="ex-group-dot" style="background:${dotColor}"></span>` : '';
-    return `<div class="ex-list-item" onclick="pickFromList(${i})">${dotHTML}<span>${esc(e.name)}</span></div>`;
+    const dot2HTML = grp2 ? `<span class="ex-group-dot" style="background:${grp2.color};opacity:0.6"></span>` : '';
+    return `<div class="ex-list-item" onclick="pickFromList(${i})">${dotHTML}${dot2HTML}<span>${esc(e.name)}</span></div>`;
   }).join('');
 
   const exact = list.find(e => normalizeName(e.name) === normalizeName(query));
@@ -1542,7 +1556,7 @@ function openAddSet(exIdx) {
   repsStaging = '';
   compoundMode = false;
   const ex = currentWorkout.exercises[exIdx];
-  document.getElementById('addSetExName').textContent = ex.name;
+  document.getElementById('addSetExName').textContent = ex.ssId ? 'Суперсет' : ex.name;
   updateSetCounter();
 
   let defaultW = 0;
@@ -1708,7 +1722,11 @@ function recordCurrentSet() {
 function switchToExercise(exIdx) {
   addSetExIdx = exIdx;
   const ex = currentWorkout.exercises[exIdx];
-  document.getElementById('addSetExName').textContent = ex.name;
+
+  // Update header only for non-superset; superset uses tabs
+  if (!ex.ssId) {
+    document.getElementById('addSetExName').textContent = ex.name;
+  }
 
   // Set weight from last set of this exercise, or prev workout
   let defaultW = 0;
@@ -1742,11 +1760,15 @@ function renderSupersetTabs() {
   }
   const partner = getSupersetPartner(addSetExIdx);
   if (partner < 0) { tabs.style.display = 'none'; return; }
-  const partnerEx = currentWorkout.exercises[partner];
+  // Always show in consistent order (lower index first)
+  const firstIdx = Math.min(addSetExIdx, partner);
+  const secondIdx = Math.max(addSetExIdx, partner);
+  const firstName = currentWorkout.exercises[firstIdx].name;
+  const secondName = currentWorkout.exercises[secondIdx].name;
   tabs.style.display = 'flex';
   tabs.innerHTML = `
-    <button class="addset-superset-tab active" onclick="switchToExercise(${addSetExIdx})">${esc(ex.name)}</button>
-    <button class="addset-superset-tab" onclick="switchToExercise(${partner})">${esc(partnerEx.name)}</button>
+    <button class="addset-superset-tab${addSetExIdx === firstIdx ? ' active' : ''}" onclick="switchToExercise(${firstIdx})">${esc(firstName)}</button>
+    <button class="addset-superset-tab${addSetExIdx === secondIdx ? ' active' : ''}" onclick="switchToExercise(${secondIdx})">${esc(secondName)}</button>
   `;
 }
 
@@ -2079,12 +2101,12 @@ function renderExPage() {
   });
 
   let list = exercises.map(e => ({
-    name: e.name, group: e.group || '',
+    name: e.name, group: e.group || '', group2: e.group2 || '',
     count: countMap.get(normalizeName(e.name)) || 0
   })).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 
-  // Group filter
-  if (_exPageGroup !== 'all') list = list.filter(item => item.group === _exPageGroup);
+  // Group filter (match primary OR secondary)
+  if (_exPageGroup !== 'all') list = list.filter(item => item.group === _exPageGroup || item.group2 === _exPageGroup);
 
   // Search filter
   const q = (document.getElementById('exPageSearch')?.value || '').trim().toLowerCase();
@@ -2103,14 +2125,18 @@ function renderExPage() {
     const norm = normalizeName(item.name);
     const checked = dictSelected.has(norm) ? 'checked' : '';
     const grp = getGroupById(item.group);
+    const grp2 = getGroupById(item.group2);
     const groupBadge = grp
       ? `<span class="ex-page-group" style="background:${grp.color}">${grp.name}</span>`
+      : '';
+    const groupBadge2 = grp2
+      ? `<span class="ex-page-group" style="background:${grp2.color};opacity:0.7">${grp2.name}</span>`
       : '';
     return `<div class="ex-page-item" id="exItem-${i}">
       <div class="ex-page-row">
         <input type="checkbox" class="ex-page-check" ${checked} onchange="exPageToggle(${i}, this.checked)" onclick="event.stopPropagation()">
         <span class="ex-page-name" onclick="exPageToggleDetail(${i})">${esc(item.name)}</span>
-        ${groupBadge}
+        ${groupBadge}${groupBadge2}
         <span class="ex-page-count" onclick="exPageToggleDetail(${i})">${item.count}x</span>
       </div>
       <div class="ex-detail" id="exDetail-${i}"></div>
@@ -2188,28 +2214,33 @@ function exPageToggleDetail(idx) {
 
 function exPageRename() {
   const items = window._exPageItems;
+  if (!items) return;
   const selected = items.find(item => dictSelected.has(normalizeName(item.name)));
-  if (!selected) return;
+  if (!selected) { showToast('Выбери упражнение'); return; }
   const newName = prompt('Новое название:', selected.name);
-  if (!newName || !newName.trim() || newName.trim() === selected.name) return;
+  if (newName === null) return; // cancelled
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === selected.name) return;
 
   const history = getHistory();
   const oldNorm = normalizeName(selected.name);
+  let changed = false;
   history.forEach(w => w.exercises.forEach(e => {
-    if (normalizeName(e.name) === oldNorm) e.name = newName.trim();
+    if (normalizeName(e.name) === oldNorm) { e.name = trimmed; changed = true; }
   }));
-  saveHistory(history);
+  if (changed) saveHistory(history);
 
   if (currentWorkout) {
     currentWorkout.exercises.forEach(e => {
-      if (normalizeName(e.name) === oldNorm) e.name = newName.trim();
+      if (normalizeName(e.name) === oldNorm) e.name = trimmed;
     });
     saveCurrent();
   }
 
   const exList = getExercises();
   const oldEx = exList.find(e => normalizeName(e.name) === oldNorm);
-  if (oldEx) { oldEx.name = newName.trim(); saveExercisesLocal(exList); syncExercisesToCloud(); }
+  if (oldEx) { oldEx.name = trimmed; saveExercisesLocal(exList); syncExercisesToCloud(); }
+  else { exList.push({ name: trimmed, group: '' }); saveExercisesLocal(exList); syncExercisesToCloud(); }
 
   dictSelected.clear();
   renderExPage();
@@ -2258,9 +2289,28 @@ function exPageExecuteMerge(keepIdx) {
 }
 
 function exPageGroupPicker() {
-  openGroupPopup(dictSelected.size + ' упр.', function(groupId) {
-    exPageAssignGroup(groupId);
-  });
+  // Show choice: primary or secondary group
+  const grid = document.getElementById('groupPopupGrid');
+  grid.innerHTML = `
+    <div class="group-popup-item" onclick="groupPopupPick('_primary')" style="border-color:var(--primary);color:var(--primary)">
+      <span>Основная</span>
+    </div>
+    <div class="group-popup-item" onclick="groupPopupPick('_secondary')" style="border-color:var(--orange);color:var(--orange)">
+      <span>Доп. группа</span>
+    </div>`;
+  document.getElementById('groupPopupTitle').textContent = 'Какую группу назначить?';
+  window._groupPopupCallback = function(choice) {
+    if (choice === '_primary') {
+      openGroupPopup(dictSelected.size + ' упр.', function(groupId) {
+        exPageAssignGroup(groupId);
+      });
+    } else if (choice === '_secondary') {
+      openGroupPopup(dictSelected.size + ' упр. (доп.)', function(groupId) {
+        exPageAssignGroup2(groupId);
+      });
+    }
+  };
+  document.getElementById('groupPopup').classList.add('open');
 }
 
 function openGroupPopup(label, callback) {
@@ -2296,6 +2346,18 @@ function exPageAssignGroup(groupId) {
   document.getElementById('exMergeNames').style.display = 'none';
   renderExPage();
   showToast('Группа обновлена!');
+}
+function exPageAssignGroup2(groupId) {
+  const items = window._exPageItems;
+  items.forEach(item => {
+    if (dictSelected.has(normalizeName(item.name))) {
+      setExerciseGroup2(item.name, groupId);
+    }
+  });
+  dictSelected.clear();
+  document.getElementById('exMergeNames').style.display = 'none';
+  renderExPage();
+  showToast('Доп. группа обновлена!');
 }
 
 // ═══════════════════════════════════

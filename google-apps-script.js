@@ -63,15 +63,15 @@ function doPost(e) {
 
   // ── Exercises ──
   } else if (action === 'sync_exercises') {
-    const sheet = getOrCreateSheet(ss, 'exercises', ['name', 'group']);
+    const sheet = getOrCreateSheet(ss, 'exercises', ['name', 'group', 'group2']);
     if (sheet.getLastRow() > 1) {
       sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
     }
     const rows = (payload.exercises || []).map(ex =>
-      [ex.name, ex.group || '']
+      [ex.name, ex.group || '', ex.group2 || '']
     );
     if (rows.length > 0) {
-      sheet.getRange(2, 1, rows.length, 2).setValues(rows);
+      sheet.getRange(2, 1, rows.length, 3).setValues(rows);
     }
     sortSheet(sheet, 1);
     cleanEmptyRows(sheet, rows.length);
@@ -109,7 +109,7 @@ function readExercises(ss) {
   const exercises = [];
   for (let i = 1; i < data.length; i++) {
     if (!data[i][0]) continue;
-    exercises.push({ name: data[i][0], group: data[i][1] || '' });
+    exercises.push({ name: data[i][0], group: data[i][1] || '', group2: data[i][2] || '' });
   }
   return exercises;
 }
