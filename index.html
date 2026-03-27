@@ -1604,6 +1604,8 @@ function closeAddSet() {
   repsStaging = '';
   document.getElementById('addSetScreen').classList.remove('open');
   renderWorkout();
+  // Auto-sync current workout to sheet
+  if (currentWorkout) saveWorkoutToSheet(currentWorkout);
 }
 
 function adjustWeight(delta) {
