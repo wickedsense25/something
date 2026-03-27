@@ -2598,9 +2598,10 @@ async function manualPush() {
   status.textContent = 'Выгружаю...';
   _syncInProgress = true;
   try {
-    await sheetRequest('sync', { workouts: getHistory() });
-    status.textContent = 'Выгружаю упражнения...';
-    await sheetRequest('sync_exercises', { exercises: getExercises() });
+    await Promise.all([
+      sheetRequest('sync', { workouts: getHistory() }),
+      sheetRequest('sync_exercises', { exercises: getExercises() })
+    ]);
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
     status.textContent = 'Готово!';
     showToast('Выгружено в таблицу');

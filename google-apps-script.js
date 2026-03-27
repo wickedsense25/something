@@ -56,9 +56,6 @@ function doPost(e) {
     if (rows.length > 0) {
       sheet.getRange(2, 1, rows.length, 4).setValues(rows);
     }
-    sortSheet(sheet, 2);
-    // Clean up extra empty rows
-    cleanEmptyRows(sheet, rows.length);
     return jsonResponse({ ok: true, count: rows.length });
 
   // ── Exercises ──
@@ -73,8 +70,6 @@ function doPost(e) {
     if (rows.length > 0) {
       sheet.getRange(2, 1, rows.length, 3).setValues(rows);
     }
-    sortSheet(sheet, 1);
-    cleanEmptyRows(sheet, rows.length);
     return jsonResponse({ ok: true, count: rows.length });
 
   } else if (action === 'get_exercises') {
