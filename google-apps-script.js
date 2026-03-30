@@ -25,17 +25,22 @@ function doPost(e) {
 
   // ── Workouts ──
   if (action === 'save') {
-    const sheet = getOrCreateSheet(ss, 'workouts', ['id', 'number', 'date', 'exercises_json']);
-    const w = payload.workout;
-    const rowIdx = findRowById(sheet, w.id);
-    const rowData = [w.id, w.number, w.date, JSON.stringify(w.exercises)];
-    if (rowIdx > 0) {
-      sheet.getRange(rowIdx, 1, 1, 4).setValues([rowData]);
-    } else {
-      sheet.appendRow(rowData);
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      const sheet = getOrCreateSheet(ss, 'workouts', ['id', 'number', 'date', 'exercises_json']);
+      const w = payload.workout;
+      const rowIdx = findRowById(sheet, w.id);
+      const rowData = [w.id, w.number, w.date, JSON.stringify(w.exercises)];
+      if (rowIdx > 0) {
+        sheet.getRange(rowIdx, 1, 1, 4).setValues([rowData]);
+      } else {
+        sheet.appendRow(rowData);
+      }
+      return jsonResponse({ ok: true });
+    } finally {
+      lock.releaseLock();
     }
-    sortSheet(sheet, 2);
-    return jsonResponse({ ok: true });
 
   } else if (action === 'delete') {
     const sheet = getOrCreateSheet(ss, 'workouts', ['id', 'number', 'date', 'exercises_json']);
@@ -44,30 +49,40 @@ function doPost(e) {
     return jsonResponse({ ok: true });
 
   } else if (action === 'sync') {
-    const sheet = getOrCreateSheet(ss, 'workouts', ['id', 'number', 'date', 'exercises_json']);
-    // Clear old data
-    if (sheet.getLastRow() > 1) {
-      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      const sheet = getOrCreateSheet(ss, 'workouts', ['id', 'number', 'date', 'exercises_json']);
+      const lastRow = sheet.getLastRow();
+      // Delete old data rows entirely
+      if (lastRow > 1) {
+        sheet.deleteRows(2, lastRow - 1);
+      }
+      // Batch write all rows at once
+      const rows = (payload.workouts || []).map(w =>
+        [w.id, w.number, w.date, JSON.stringify(w.exercises)]
+      );
+      if (rows.length > 0) {
+        sheet.insertRowsAfter(1, rows.length);
+        sheet.getRange(2, 1, rows.length, 4).setValues(rows);
+      }
+      return jsonResponse({ ok: true, count: rows.length });
+    } finally {
+      lock.releaseLock();
     }
-    // Batch write all rows at once (fast!)
-    const rows = (payload.workouts || []).map(w =>
-      [w.id, w.number, w.date, JSON.stringify(w.exercises)]
-    );
-    if (rows.length > 0) {
-      sheet.getRange(2, 1, rows.length, 4).setValues(rows);
-    }
-    return jsonResponse({ ok: true, count: rows.length });
 
   // ── Exercises ──
   } else if (action === 'sync_exercises') {
     const sheet = getOrCreateSheet(ss, 'exercises', ['name', 'group', 'group2']);
-    if (sheet.getLastRow() > 1) {
-      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.deleteRows(2, lastRow - 1);
     }
     const rows = (payload.exercises || []).map(ex =>
       [ex.name, ex.group || '', ex.group2 || '']
     );
     if (rows.length > 0) {
+      sheet.insertRowsAfter(1, rows.length);
       sheet.getRange(2, 1, rows.length, 3).setValues(rows);
     }
     return jsonResponse({ ok: true, count: rows.length });
